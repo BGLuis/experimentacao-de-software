@@ -1,0 +1,10 @@
+# Credenciais e dados gerados localmente
+.env
+data/*.csv
+data/*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
