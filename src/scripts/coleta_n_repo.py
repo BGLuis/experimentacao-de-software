@@ -13,7 +13,7 @@ from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-TAMANHO_LOTE = 100
+TAMANHO_LOTE = 5
 API_URL = "https://api.github.com/graphql"
 ARQUIVO_ENV = Path(__file__).resolve().parents[2] / ".env"
 
@@ -141,9 +141,11 @@ def consultar_github(gerenciador_tokens: GerenciadorTokens, query: str, variavei
                 continue
             if error.code not in {502, 503, 504} or tentativa >= 8:
                 raise RuntimeError(f"GitHub respondeu HTTP {error.code}.") from error
+            print(f"\n{Colors.RED}Erro HTTP {error.code}: {error.reason}{Colors.RESET}")
         except (URLError, IncompleteRead, TimeoutError) as error:
             if tentativa >= 8:
                 raise RuntimeError("Falha de conexão após várias tentativas.") from error
+            print(f"\n{Colors.RED}Erro de rede: {error}{Colors.RESET}")
         
         espera = 2 ** min(tentativa, 6)
         print(f"\n{Colors.RED}Falha temporária; nova tentativa em {espera}s...{Colors.RESET}")
