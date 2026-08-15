@@ -1,4 +1,5 @@
 """Script de validação para as métricas RQ03 e RQ04."""
+""" teste"""
 
 from __future__ import annotations
 
