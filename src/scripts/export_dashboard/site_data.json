@@ -1,0 +1,38 @@
+{
+    "top_linguagens_estrelas": {
+        "Python": 32772169,
+        "TypeScript": 24783657,
+        "JavaScript": 19668497,
+        "Nenhuma": 16005618,
+        "Go": 12379815,
+        "Rust": 7810458,
+        "C++": 7810299,
+        "Java": 7245706,
+        "C": 5039899,
+        "Shell": 4117992
+    },
+    "projetos_ia_por_ano": {
+        "2018": 108,
+        "2019": 111,
+        "2020": 112,
+        "2021": 81,
+        "2022": 119,
+        "2023": 293,
+        "2024": 180,
+        "2025": 245,
+        "2026": 159
+    },
+    "taxa_arquivamento_por_tamanho": {
+        "Pequeno (<1MB)": 0.09273743016759776,
+        "Médio (1-10MB)": 0.07762962962962963,
+        "Grande (10-100MB)": 0.07006662072134161,
+        "Gigante (>100MB)": 0.04386288241798747
+    },
+    "licencas_doacoes_pct": {
+        "GNU Affero General Public Lice...": 49.10025706940874,
+        "GNU General Public License v3....": 42.91044776119403,
+        "BSD 2-Clause \"Simplified\" Lice...": 42.857142857142854,
+        "GNU Lesser General Public Lice...": 37.9746835443038,
+        "MIT License": 35.33607088826454
+    }
+}
