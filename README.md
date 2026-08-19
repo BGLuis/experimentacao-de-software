@@ -1,76 +1,98 @@
-## INFORMAÇÕES SOBRE A AVALIAÇÃO
+<div align="center">
 
-| LAB01 | Laboratório 01 - 15 pontos |
-|---|---|
+<!-- Badges de Status do GitHub -->
+![GitHub Stars](https://www.shieldcn.dev/github/stars/bgluis/experimentacao-de-software.svg?variant=secondary&size=sm)
+![GitHub Forks](https://www.shieldcn.dev/github/forks/bgluis/experimentacao-de-software.svg?variant=secondary&size=sm)
+![Watchers](https://www.shieldcn.dev/github/watchers/bgluis/experimentacao-de-software.svg?variant=secondary&size=sm)
+![Contributors](https://www.shieldcn.dev/github/contributors/bgluis/experimentacao-de-software.svg?theme=emerald&size=sm)
+![License](https://www.shieldcn.dev/github/license/bgluis/experimentacao-de-software.svg?variant=ghost&size=sm)
 
-### INFORMAÇÕES DOCENTE     
+<br/>
 
-| CURSO: ENGENHARIA DE SOFTWARE | DISCIPLINA: LABORATÓRIO DE EXPERIMENTAÇÃO DE SOFTWARE | TURNO: NOITE | PERÍODO/SALA: 6º |
-|---|---|---|---|
+<!-- Badges das Tecnologias Utilizadas -->
+![Python](https://www.shieldcn.dev/badge/Python-3776AB.svg?logo=python&variant=branded&size=sm)
 
-**PROFESSOR(A):** Danilo Maia
+  <h3>Experimentação de Software</h3>
+  Mineração e análise de dados dos repositórios mais populares do GitHub via GraphQL.
+</div>
 
----
+# 📖 Sobre
+O repositório contém scripts em Python desenvolvidos para extrair dados estruturados dos repositórios com maior número de estrelas no GitHub. Através de consultas feitas à API GraphQL do GitHub, o projeto coleta e analisa métricas cruciais de sistemas open-source. Os dados coletados são então salvos e validados para gerar relatórios e responder a diferentes questões de pesquisa (RQs) propostas.
 
-## Características de repositórios populares + Setup do Kanban
+# 📋 Motivo
+O projeto foi criado como requisito prático para a disciplina de Laboratório de Experimentação de Software (Engenharia de Software, 6º período). O objetivo é estudar empiricamente as principais características de sistemas populares open-source através da mineração de dados via API GraphQL do GitHub, enquanto simultaneamente é implementada e monitorada uma metodologia ágil utilizando um quadro Kanban para a gestão de progresso do grupo.
 
-Neste laboratório, vamos estudar as principais características de sistemas populares open-source, dando início também ao uso do quadro Kanban que acompanhará o grupo durante todo o semestre. Para a parte de mineração, colete os dados indicados a seguir para os 1.000 repositórios com maior número de estrelas no GitHub e discuta os valores obtidos.
+# 📊 Dados Extraídos
+Durante a mineração dos repositórios via API GraphQL, um extenso conjunto de dados é coletado e estruturado referente a **12.233 repositórios**. Os dados são salvos em CSV (`data/repositorios_populares.csv`) contendo os seguintes agrupamentos:
 
-### Parte 1 — Questões de Pesquisa
+**Informações Gerais**
+- Repositório (Nome e URL) e Descrição
+- Linguagens primárias e Tags / Tópicos
+- Licença adotada
+- Tamanho em KB
+- Indicadores booleanos (`e_fork`, `esta_arquivado`, `recebe_doacoes`, `possui_wiki`, `possui_issues`)
 
-**RQ 01.** Sistemas populares são maduros/antigos?
-Métrica: idade do repositório (calculado a partir da data de sua criação)
+**Popularidade e Envolvimento**
+- Total de Estrelas, Forks e Observadores (watchers)
+- Usuários mencionáveis (contributors/participants)
 
-**RQ 02.** Sistemas populares recebem muita contribuição externa?
-Métrica: total de pull requests aceitas
+**Atividade e Histórico**
+- Data de criação e Idade em dias
+- Data da última atualização / último push e os respectivos dias desde as ocorrências
+- Total de Commits, Releases e médias de dias entre commits (histórico e recente)
+- Maior intervalo recente sem submissão de código (gap)
 
-**RQ 03.** Sistemas populares lançam releases com frequência?
-Métrica: total de releases
+**Issues e Pull Requests**
+- Total de Issues (Abertas, Fechadas e Total)
+- Razão de fechamento de Issues
+- Total de Pull Requests (Abertas e Aceitas)
 
-**RQ 04.** Sistemas populares são atualizados com frequência?
-Métrica: tempo até a última atualização
+# 📚 Laboratórios e Documentação
+As instruções e definições detalhadas de cada etapa prática da disciplina são armazenadas na pasta `docs/`. Acesse os links abaixo para visualizar o roteiro completo de cada laboratório:
+- [Laboratório 01 - Características de repositórios populares](docs/lab01_instructions.md)
+- *Laboratório 02 (A ser adicionado)*
+- *Laboratório 03 (A ser adicionado)*
+- *Laboratório 04 (A ser adicionado)*
 
-**RQ 05.** Sistemas populares são escritos nas linguagens mais populares?
-Métrica: linguagem primária de cada repositório
-*(defina e referencie explicitamente a fonte usada para "linguagens mais populares" — ex.: TIOBE Index, GitHut ou o Octoverse do GitHub — mantendo a mesma referência ao longo de todo o laboratório)*
+# 💻 Como iniciar
 
-**RQ 06.** Sistemas populares possuem um alto percentual de issues fechadas?
-Métrica: razão entre issues fechadas e total de issues
+### Requisitos
+- [Python 3.x](https://www.python.org/downloads/)
+- [Git](https://git-scm.com/downloads)
 
-**RQ 07:** Sistemas escritos em linguagens mais populares recebem mais contribuição externa, lançam mais releases e são atualizados com mais frequência? (divida os resultados das RQs 02, 03 e 04 por linguagem)
+### Instalação
 
-### Parte 2 — Setup do GitHub Projects do grupo
+1. Clone o repositório do projeto:
+  ```sh
+  git clone https://github.com/bgluis/experimentacao-de-software.git
+  ```
 
-O grupo (trio) deve constituir, a partir deste laboratório, o GitHub Projects (v2) que será usado até o final do semestre. Defina e documente:
+2. Navegue até o diretório do projeto:
+  ```sh
+  cd experimentacao-de-software
+  ```
 
-1. **Crie um GitHub Projects (v2)** vinculado ao repositório do grupo.
-2. **Cartões = Issues** do repositório, adicionadas ao Project (não usar "draft issues" soltas — cada tarefa deve virar uma Issue de verdade, rastreável pela API) e **atribuídas a um responsável** (campo Assignee).
-3. **Colunas do board** (campo Status): no mínimo `Backlog → To Do → Doing → Review → Done`.
-4. **Limite de WIP** (Work in Progress) para a coluna Doing — defina e justifique o número escolhido.
-5. Todas as tarefas do próprio Lab01 (e dos laboratórios seguintes) devem ser quebradas em Issues e movimentadas no board conforme o progresso real do grupo, não retroativamente.
-6. **Snapshot de fechamento de sprint:** ao final de cada sprint (Lab01S01, S02, S03...), rode um script GraphQL (reaproveitando o que já foi feito na Parte 1) que exporte os itens do Project e seu status atual para um arquivo CSV. Esses snapshots, acumulados sprint a sprint, serão a base de dados dos Labs 04 e 05 — como o GitHub Projects não guarda histórico de mudanças de coluna consultável via API, essa série de snapshots faz esse papel.
-7. **Referencie o número da Issue em cada commit** (ex.: `#12 implementa consulta GraphQL`), para que o GitHub vincule automaticamente commit ↔ Issue no histórico. **A correção do professor é feita a partir do board**: commits sem essa referência não serão considerados na avaliação, mesmo que estejam no repositório.
+3. Crie e ative o ambiente virtual (Recomendado):
+  ```sh
+  python -m venv .venv
+  source .venv/bin/activate  # No Linux/macOS
+  # ou
+  .venv\Scripts\activate     # No Windows
+  ```
 
-### Relatório Final
+4. Configure as variáveis de ambiente:
+  Copie o arquivo de exemplo e insira seu token:
+  ```sh
+  cp .env.example .env
+  ```
 
-Documento com: (i) introdução com hipóteses informais sobre as RQs; (ii) metodologia de coleta; (iii) resultados por RQ (valores medianos, contagem por categoria quando aplicável); (iv) discussão hipótese vs. resultado; (v) uma seção "Configuração do processo", descrevendo a estrutura do GitHub Projects (colunas, política de WIP) e um print do board ao final do laboratório, com o link do repositório/GitHub Projects do grupo.
+# ⚙️ Variáveis de Ambiente
 
-Link do repositório/GitHub Projects: `<preencher>`
+| Variável | Descrição | Valor Padrão/Exemplo |
+| :--- | :--- | :--- |
+| `GITHUB_TOKEN` | Token de autenticação pessoal do GitHub necessário para consultar a API GraphQL. Você pode usar múltiplos tokens separados por vírgula para evitar limites de taxa (Rate Limits). | `ghp_seutoken123...` ou `token1,token2` |
 
-### Processo de Desenvolvimento
-
-**Lab01S01** (4 pontos): Consulta GraphQL para 100 repositórios (todos os dados/métricas necessários) + requisição automática + GitHub Projects criado, com colunas (Status) e limite de WIP definidos e primeiras Issues em uso.
-
-*Divisão sugerida por integrante (desde esta sprint, para viabilizar desenvolvimento individual semanal em um trio):* distribua as RQs em 3 partes, uma por integrante (ex.: A → RQ01+RQ02; B → RQ03+RQ04; C → RQ05+RQ06+bônus). Cada integrante implementa e testa, em Issue própria, a extração e uma validação rápida (numa amostra de 5-10 repositórios) dos campos/métricas da sua parte, antes de integrar ao script único de consulta do grupo.
-
-**Lab01S02** (4 pontos): Paginação (consulta 1000 repositórios) + dados em .csv + primeira versão do relatório com hipóteses informais + board atualizado e primeiro snapshot exportado, refletindo o fluxo real de trabalho do grupo em S01 e S02.
-
-*Divisão sugerida por integrante:* a paginação em si (tarefa mecânica) pode ficar com qualquer integrante, mas cada integrante deve validar individualmente, para a sua parte de RQs, a consistência dos dados nos 1000 repositórios (distribuição, outliers, valores ausentes) e escrever, em Issue própria, a hipótese informal correspondente.
-
-**Lab01S03** (4 pontos): Análise e visualização de dados para as 7 RQs.
-
-**Relatório Final** (3 pontos): elaboração do documento final (ver seção "Relatório Final" acima), incluindo o anexo com print do board mostrando o fluxo completo do Lab01 e a política de WIP em uso.
-
-**Prazo final:** conforme cronograma da disciplina.
-**Valor total:** 15 pontos | Desconto de 1,0 ponto por dia de atraso | Desconto de até 10% da nota da sprint por qualidade insuficiente do uso do GitHub Projects (WIP não respeitado, Issues sem Assignee, cartões desatualizados, ausência de evolução semanal).
-**Observação:** não é permitido o uso de bibliotecas de terceiros que consultem a API do GitHub — a query GraphQL deve ser escrita e consumida por script próprio do grupo. A correção é feita a partir do GitHub Projects: commits sem referência ao número da Issue correspondente não serão considerados.
+# 🤝 Contribuidores
+ <a href="https://github.com/bgluis/experimentacao-de-software/graphs/contributors">
+   <img src="https://contrib.rocks/image?repo=bgluis/experimentacao-de-software"/>
+ </a>
