@@ -1,0 +1,7 @@
+categoria,repositorios,percentual_amostra,percentual_validos
+0% a <25%,22,0.022,0.023
+25% a <50%,86,0.086,0.0899
+50% a <75%,171,0.171,0.1787
+75% a 100%,678,0.678,0.7085
+Sem issues,43,0.043,
+Ausente ou inválido,0,0.0,

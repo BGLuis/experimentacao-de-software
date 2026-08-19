@@ -9,7 +9,13 @@ LINGUAGENS_ESCOLHIDAS = {
     "TypeScript", "Python", "JavaScript", "Java", "C#", "PHP", "Shell", "C++", "HCL", "Go",
 }
 
-ARQUIVO_CSV = Path("data/repositorios_populares.csv")
+ARQUIVO_CSV = Path(__file__).resolve().parents[3] / "data" / "repositorios_populares.csv"
+
+
+def obter_linguagem_primaria(linha: dict[str, str]) -> str | None:
+    """Obtém a primeira linguagem da lista, ordenada por tamanho pelo coletor."""
+    linguagens = (linha.get("linguagens") or linha.get("linguagem_primaria") or "").strip()
+    return linguagens.split(",", 1)[0].strip() or None
 
 
 class medicao:
@@ -37,7 +43,7 @@ class medicao:
 def main() -> None:
     with ARQUIVO_CSV.open(encoding="utf-8", newline="") as arquivo:
         for row in csv.DictReader(arquivo):
-            medicao(row["linguagem_primaria"]).imprimir(row["repositorio"])
+            medicao(obter_linguagem_primaria(row)).imprimir(row["repositorio"])
 
 
 if __name__ == "__main__":

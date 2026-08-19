@@ -2,10 +2,15 @@
 .env
 data/*.csv
 data/*.json
+# Snapshot versionado exigido pela Sprint 02.
+!data/repositorios_populares_1000.csv
 
 # Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-.venv/
+
+# Temp and outputs
+tmp/
+output/
