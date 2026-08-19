@@ -8,12 +8,12 @@
 
 ## 1. Introdução com Hipóteses Informais (RQs)
 
-Este relatório apresenta os resultados preliminares da mineração e análise de dados dos repositórios mais populares do GitHub. O objetivo da pesquisa é investigar características fundamentais que tornam projetos de código aberto bem-sucedidos e ativos na comunidade, guiados por 7 Questões de Pesquisa (RQs). A amostra utilizada neste estudo contém mais de 12.000 repositórios coletados via GraphQL API.
+Este relatório apresenta os resultados preliminares da mineração e análise de dados dos repositórios mais populares do GitHub. O objetivo da pesquisa é investigar características fundamentais que tornam projetos de código aberto bem-sucedidos e ativos na comunidade, guiados por 6 Questões de Pesquisa (RQs). A amostra utilizada neste estudo contém os 1.000 repositórios mais populares coletados via GraphQL API.
 
 ## 2. Metodologia de Coleta
 
 - **Coleta de Dados:** Os dados foram extraídos utilizando a API GraphQL do GitHub.
-- **Amostra:** 12.231 repositórios ordenados por número de estrelas.
+- **Amostra:** 1.000 repositórios ordenados por número de estrelas.
 - **Validação:** A validação preliminar dos dados baseou-se na formulação de hipóteses informais e análise de distribuição, identificação de outliers e verificação de valores ausentes para cada RQ.
 
 ---
@@ -22,27 +22,27 @@ Este relatório apresenta os resultados preliminares da mineração e análise d
 
 ### RQ01: Idade dos Repositórios Populares
 **Responsável: Luis**  
-**Hipótese Informal:**  
-**Métrica:**  
-**Validação e Conclusão:**  
+**Hipótese Informal:** Repositórios mais populares tendem a ser maduros e antigos, pois precisam de tempo para construir uma comunidade sólida e acumular milhares de estrelas.  
+**Métrica:** Idade do repositório em anos (calculada a partir da data de criação até a data atual).  
+**Validação e Conclusão:** A análise dos dados suporta a hipótese. A mediana de idade dos repositórios na amostra foi de 8,72 anos (com média de 8,33 anos e desvio padrão de 4,32 anos). Isso confirma que a grande maioria dos repositórios de sucesso global são projetos bastante estabelecidos e consolidados ao longo de quase uma década.
 
 ### RQ02: Contribuição Externa (Pull Requests)
 **Responsável: Luis**  
-**Hipótese Informal:**  
-**Métrica:**  
-**Validação e Conclusão:**  
+**Hipótese Informal:** Repositórios populares recebem uma quantidade massiva de contribuições externas através de pull requests, refletindo um alto engajamento e descentralização do desenvolvimento.  
+**Métrica:** Total de pull requests aceitas (status merged) por repositório.  
+**Validação e Conclusão:** Os resultados confirmam fortemente a hipótese. A mediana de PRs aceitas foi de 134, indicando colaboração externa frequente na maioria absoluta dos projetos. A média foi de 1.273,64 com um desvio padrão muito alto (6.215,67), demonstrando a presença de repositórios gigantescos que concentram volumes extremos de contribuições externas da comunidade.  
 
 ### RQ03: Frequência de Releases
 **Responsável: Isabella**  
 **Hipótese Informal:** Repositórios populares tendem a lançar releases com regularidade, mas alguns podem não usar a ferramenta de releases do GitHub, como listas de curadoria e tutoriais.  
 **Métrica:** Número total de releases lançadas por cada repositório.  
-**Validação e Conclusão:** Na amostra de 12.231 repositórios, a mediana de releases é de 11, suportando a hipótese de regularidade. No entanto, aproximadamente 34% da amostra (4.181 repositórios) não lançou nenhuma release (0 releases), confirmando a hipótese de que há um grande volume de projetos, como guias e bibliografias, que não utilizam o versionamento tradicional de artefatos no GitHub.  
+**Validação e Conclusão:** Na nova amostra dos Top 1.000 repositórios, a mediana de releases subiu consideravelmente para 39,5, indicando uma regularidade de versionamento muito alta entre a elite do GitHub. Contudo, 28% (280 repositórios) não lançaram nenhuma release (0 releases). Isso reafirma que uma porção enorme dos projetos mais hypados ainda foca em conteúdos passivos (guias, listas) ou não adota releases formais.
 
 ### RQ04: Frequência de Atualizações (Push)
 **Responsável: Isabella**  
 **Hipótese Informal:** Repositórios populares tendem a ser atualizados muito recentemente, pois projetos altamente ativos atraem e mantêm sua base de usuários.  
-**Métrica:** Tempo decorrido (em dias) desde a última atualização de código (utilizei o `pushedAt` para ficar amais específico).  
-**Validação e Conclusão:** Os resultados apoiam fortemente a hipótese. Cerca de 20% da amostra (2.413 repositórios) tiveram alterações de código nas últimas 24 horas. A mediana é de apenas 50 dias sem push, demonstrando alta frequência de manutenção. No entanto, foram detectados outliers significativos indicando abandono, o maior caso estando há 5.356 dias, quase 15 anos, sem atualizações.  
+**Métrica:** Tempo decorrido (em dias) desde a última atualização de código (utilizando o `pushedAt`).  
+**Validação e Conclusão:** Os dados dos 1.000 maiores repositórios comprovam uma atividade diária frenética: 40,5% deles receberam atualizações de código nas últimas 24 horas. A mediana global de inatividade é de apenas 3 dias (contra 50 dias da amostra geral antiga). O outlier mais extremo de abandono nesta elite está há 2.448 dias (cerca de 6,7 anos) sem um push sequer, mostrando que a fama pode persistir muito além da manutenção ativa.
 
 ### RQ05: Linguagens Populares
 
@@ -66,12 +66,9 @@ Este relatório apresenta os resultados preliminares da mineração e análise d
 
 Fonte de linguagens populares: [GitHub Octoverse 2025](https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/).
 
-### RQ07: Correlação Linguagem vs Atividade
-**Responsável: Leandro**  
-**Hipótese Informal:**  
-**Métrica:**  
-**Validação e Conclusão:**  
+
 
 ---
 
 ## 4. Considerações Finais
+
