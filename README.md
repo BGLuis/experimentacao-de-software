@@ -15,6 +15,9 @@
   <h3>Experimentação de Software</h3>
   Mineração e análise de dados dos repositórios mais populares do GitHub via GraphQL.
 </div>
+<div align="center">
+  https://arsenal.dev.br/labexperimentacao/
+</div>
 
 # 📖 Sobre
 O repositório contém scripts em Python desenvolvidos para extrair dados estruturados dos repositórios com maior número de estrelas no GitHub. Através de consultas feitas à API GraphQL do GitHub, o projeto coleta e analisa métricas cruciais de sistemas open-source. Os dados coletados são então salvos e validados para gerar relatórios e responder a diferentes questões de pesquisa (RQs) propostas.
