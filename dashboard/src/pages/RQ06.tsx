@@ -1,11 +1,30 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
+import { getColorForLanguage } from '../utils/colors';
 import { Spinner } from '../components/Spinner';
 import { sampleData } from '../utils/sampling';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer , Cell} from 'recharts';
+
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white p-3 border border-gray-200 shadow-lg rounded-md z-50 relative">
+        <p className="text-sm font-bold text-gray-800 mb-1">Linguagem: {data.language || 'Desconhecida'}</p>
+        {payload.map((p: any, i: number) => (
+          <p key={i} className="text-sm text-gray-600">
+            <span className="font-medium">{p.name}:</span> {new Intl.NumberFormat('pt-BR').format(p.value)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function RQ06() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading, filters } = useData();
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
@@ -24,10 +43,18 @@ export default function RQ06() {
       .map(d => {
         const totalPrs = d.pull_requests_abertas + d.pull_requests_aceitas;
         const ratio = totalPrs > 0 ? (d.pull_requests_aceitas / totalPrs) * 100 : 0;
-        return { ratio: Number(ratio.toFixed(2)), stars: d.estrelas };
+        
+        const langs = d.linguagens ? d.linguagens.split(',').map((l: string) => l.trim()) : [];
+        let lang = langs[0] || 'Desconhecida';
+        if (filters.languages.length > 0) {
+          const match = langs.find((l: string) => filters.languages.includes(l));
+          if (match) lang = match;
+        }
+        return { ratio: Number(ratio.toFixed(2)), stars: d.estrelas, language: lang };
+
       });
     return sampleData(rawData, 2000);
-  }, [data]);
+  }, [data, filters]);
 
   if (loading) {
     return (
@@ -56,8 +83,12 @@ export default function RQ06() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" dataKey="ratio" name="% PRs Aceitos" unit="%" domain={[0, 100]} allowDataOverflow={true} tickFormatter={(v) => `${v}%`} label={{ value: 'Taxa de Aceitação (%)', position: 'insideBottom', offset: -15, fill: '#64748b' }} />
                 <YAxis type="number" dataKey="stars" name="Estrelas" domain={['dataMin', 'auto']} allowDataOverflow={true} tickFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)} label={{ value: 'Número de Estrelas', angle: -90, position: 'insideLeft', offset: -20, style: { textAnchor: 'middle' }, fill: '#64748b' }} />
-                <Tooltip cursor={{ strokeDasharray: '3 3' }} formatter={(value: any, name: any) => [name === 'Estrelas' ? new Intl.NumberFormat('pt-BR').format(Number(value) || 0) : `${value}%`, String(name)]} />
-                <Scatter isAnimationActive={false} name="Repositórios" data={chartData} fill="#ec4899" />
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
+                <Scatter isAnimationActive={false} name="Repositórios" data={chartData}>
+                  {chartData.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={getColorForLanguage(entry.language)} />
+                  ))}
+                </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
           )}

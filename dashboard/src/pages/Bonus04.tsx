@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus04() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading } = useData();
 
   const tagStats = useMemo(() => {
     const tagsMap: Record<string, { count: number; stars: number }> = {};

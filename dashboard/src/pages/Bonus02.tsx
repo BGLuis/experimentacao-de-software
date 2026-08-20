@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus02() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading } = useData();
 
   const aiStats = useMemo(() => {
     let totalAi = 0;

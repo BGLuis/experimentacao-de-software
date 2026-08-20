@@ -3,8 +3,10 @@ import Papa from 'papaparse';
 import type { RepoData } from '../types';
 
 export interface FilterState {
-  language: string;
-  year: string;
+  languages: string[];
+  yearStart: string;
+  yearEnd: string;
+  repoType: 'all' | 'code_only' | 'docs_only';
 }
 
 interface DataContextType {
@@ -19,14 +21,14 @@ export const DataContext = createContext<DataContextType>({
   data: [], 
   filteredData: [],
   loading: true,
-  filters: { language: '', year: '' },
+  filters: { languages: [], yearStart: '', yearEnd: '', repoType: 'all' },
   setFilters: () => {}
 });
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<RepoData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<FilterState>({ language: '', year: '' });
+  const [filters, setFilters] = useState<FilterState>({ languages: [], yearStart: '', yearEnd: '', repoType: 'all' });
 
   useEffect(() => {
     const csvUrl = 'https://raw.githubusercontent.com/BGLuis/experimentacao-de-software/main/data/repositorios_populares.csv';
@@ -66,16 +68,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return data.filter(d => {
       let matchesLang = true;
       let matchesYear = true;
+      let matchesType = true;
 
-      if (filters.language) {
-        matchesLang = !!d.linguagens && d.linguagens.split(',').map(l => l.trim()).includes(filters.language);
+      if (filters.languages.length > 0) {
+        matchesLang = !!d.linguagens && filters.languages.some(lang => d.linguagens.split(',').map(l => l.trim()).includes(lang));
       }
       
-      if (filters.year) {
-        matchesYear = !!d.criado_em && d.criado_em.startsWith(filters.year);
+      if (filters.yearStart || filters.yearEnd) {
+        const year = d.criado_em ? parseInt(d.criado_em.substring(0, 4)) : 0;
+        if (filters.yearStart && year) {
+           matchesYear = matchesYear && year >= parseInt(filters.yearStart);
+        }
+        if (filters.yearEnd && year) {
+           matchesYear = matchesYear && year <= parseInt(filters.yearEnd);
+        }
       }
 
-      return matchesLang && matchesYear;
+      if (filters.repoType !== 'all') {
+        const isDoc = (d.linguagens === 'Markdown' || !d.linguagens) || (!!d.tags && (d.tags.toLowerCase().includes('awesome') || d.tags.toLowerCase().includes('documentation') || d.tags.toLowerCase().includes('book')));
+        if (filters.repoType === 'code_only') matchesType = !isDoc;
+        if (filters.repoType === 'docs_only') matchesType = !!isDoc;
+      }
+
+      return matchesLang && matchesYear && matchesType;
     });
   }, [data, filters]);
 

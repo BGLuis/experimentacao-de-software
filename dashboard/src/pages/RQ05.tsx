@@ -3,8 +3,11 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+
+
+
 export default function RQ05() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading, filters } = useData();
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
@@ -33,7 +36,7 @@ export default function RQ05() {
       .map(([lang, count]) => ({ lang, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 15); // Top 15 languages
-  }, [data]);
+  }, [data, filters]);
 
   if (loading) {
     return (

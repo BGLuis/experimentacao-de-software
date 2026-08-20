@@ -16,6 +16,7 @@ const Bonus01 = lazy(() => import('./pages/Bonus01'));
 const Bonus02 = lazy(() => import('./pages/Bonus02'));
 const Bonus03 = lazy(() => import('./pages/Bonus03'));
 const Bonus04 = lazy(() => import('./pages/Bonus04'));
+const Bonus05 = lazy(() => import('./pages/Bonus05'));
 
 const navItems = [
   { path: '/', label: 'Visão Geral', icon: LayoutDashboard },
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/bonus02', label: 'Bônus 02: Fenômeno IA', icon: Star },
   { path: '/bonus03', label: 'Bônus 03: Licenças', icon: Star },
   { path: '/bonus04', label: 'Bônus 04: Tags & Engaj.', icon: Star },
+  { path: '/bonus05', label: 'Bônus 05: Anos & Langs', icon: Star },
 ];
 
 function NavigationContent({ onItemClick }: { onItemClick?: () => void }) {
@@ -140,6 +142,7 @@ function App() {
                 <Route path="/bonus02" element={<Bonus02 />} />
                 <Route path="/bonus03" element={<Bonus03 />} />
                 <Route path="/bonus04" element={<Bonus04 />} />
+                <Route path="/bonus05" element={<Bonus05 />} />
               </Routes>
             </Suspense>
           </main>
