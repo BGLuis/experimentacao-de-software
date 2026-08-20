@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { getColorForLanguage } from '../utils/colors';
 import { Spinner } from '../components/Spinner';
 import { sampleData } from '../utils/sampling';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer , Cell} from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer , Legend} from 'recharts';
 
 export default function RQ06() {
   const { filteredData: data, loading } = useData();
@@ -57,12 +57,17 @@ export default function RQ06() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" dataKey="ratio" name="% PRs Aceitos" unit="%" domain={[0, 100]} allowDataOverflow={true} tickFormatter={(v) => `${v}%`} label={{ value: 'Taxa de Aceitação (%)', position: 'insideBottom', offset: -15, fill: '#64748b' }} />
                 <YAxis type="number" dataKey="stars" name="Estrelas" domain={['dataMin', 'auto']} allowDataOverflow={true} tickFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)} label={{ value: 'Número de Estrelas', angle: -90, position: 'insideLeft', offset: -20, style: { textAnchor: 'middle' }, fill: '#64748b' }} />
+                <Legend verticalAlign="top" height={36} />
                 <Tooltip cursor={{ strokeDasharray: '3 3' }} formatter={(value: any, name: any) => [name === 'Estrelas' ? new Intl.NumberFormat('pt-BR').format(Number(value) || 0) : `${value}%`, String(name)]} />
-                <Scatter isAnimationActive={false} name="Repositórios" data={chartData}>
-                  {chartData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={getColorForLanguage(entry.language)} />
-                  ))}
-                </Scatter>
+                {Array.from(new Set(chartData.map((d: any) => d.language || 'Desconhecida'))).map(lang => (
+                  <Scatter 
+                    key={lang as string}
+                    isAnimationActive={false} 
+                    name={lang as string} 
+                    data={chartData.filter((d: any) => (d.language || 'Desconhecida') === lang)} 
+                    fill={getColorForLanguage(lang as string)} 
+                  />
+                ))}
               </ScatterChart>
             </ResponsiveContainer>
           )}
