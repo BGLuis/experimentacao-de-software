@@ -5,8 +5,6 @@ import { Database, Star, GitMerge, AlertCircle } from 'lucide-react';
 export default function Home() {
   const { data, loading } = useData();
 
-  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
-
   const { totalRepos, avgStars, avgPRs, avgIssues } = useMemo(() => {
     const validData = data.filter(d => d.repositorio);
     const totalRepos = validData.length;
@@ -15,6 +13,9 @@ export default function Home() {
     const avgIssues = validData.reduce((acc, curr) => acc + (curr.issues_total || 0), 0) / (totalRepos || 1);
     return { totalRepos, avgStars, avgPRs, avgIssues };
   }, [data]);
+
+  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
+
 
   return (
     <div className="space-y-6">

@@ -5,8 +5,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export default function RQ05() {
   const { data, loading } = useData();
 
-  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
-
   const chartData = useMemo(() => {
     const langMap = new Map<string, number>();
     
@@ -21,6 +19,9 @@ export default function RQ05() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 15); // Top 15 languages
   }, [data]);
+
+  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
+
 
   return (
     <div className="space-y-4">
