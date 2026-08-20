@@ -74,6 +74,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
         const parsed = result.toArray().map((d: any) => {
           const row = d.toJSON();
+          
+          // Convert any BigInt values from Parquet/Arrow into standard JS Numbers
+          for (const key in row) {
+            if (typeof row[key] === 'bigint') {
+              row[key] = Number(row[key]);
+            }
+          }
+
           const getIsoString = (val: any) => val instanceof Date ? val.toISOString() : String(val || '');
           return {
             ...row,
