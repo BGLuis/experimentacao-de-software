@@ -1,17 +1,20 @@
+import { useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { Database, Star, GitMerge, AlertCircle } from 'lucide-react';
 
 export default function Home() {
   const { data, loading } = useData();
 
-  if (loading) return <div>Carregando dados...</div>;
+  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
 
-  const validData = data.filter(d => d.repositorio);
-
-  const totalRepos = validData.length;
-  const avgStars = validData.reduce((acc, curr) => acc + (curr.estrelas || 0), 0) / (totalRepos || 1);
-  const avgPRs = validData.reduce((acc, curr) => acc + (curr.pull_requests_abertas || 0) + (curr.pull_requests_aceitas || 0), 0) / (totalRepos || 1);
-  const avgIssues = validData.reduce((acc, curr) => acc + (curr.issues_total || 0), 0) / (totalRepos || 1);
+  const { totalRepos, avgStars, avgPRs, avgIssues } = useMemo(() => {
+    const validData = data.filter(d => d.repositorio);
+    const totalRepos = validData.length;
+    const avgStars = validData.reduce((acc, curr) => acc + (curr.estrelas || 0), 0) / (totalRepos || 1);
+    const avgPRs = validData.reduce((acc, curr) => acc + (curr.pull_requests_abertas || 0) + (curr.pull_requests_aceitas || 0), 0) / (totalRepos || 1);
+    const avgIssues = validData.reduce((acc, curr) => acc + (curr.issues_total || 0), 0) / (totalRepos || 1);
+    return { totalRepos, avgStars, avgPRs, avgIssues };
+  }, [data]);
 
   return (
     <div className="space-y-6">

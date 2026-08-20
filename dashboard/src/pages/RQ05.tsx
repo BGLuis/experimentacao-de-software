@@ -1,23 +1,26 @@
+import { useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function RQ05() {
   const { data, loading } = useData();
 
-  if (loading) return <div>Carregando dados...</div>;
+  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
 
-  const langMap = new Map<string, number>();
-  
-  data.forEach(d => {
-    if (d.linguagens) {
-      langMap.set(d.linguagens, (langMap.get(d.linguagens) || 0) + 1);
-    }
-  });
+  const chartData = useMemo(() => {
+    const langMap = new Map<string, number>();
+    
+    data.forEach(d => {
+      if (d.linguagens) {
+        langMap.set(d.linguagens, (langMap.get(d.linguagens) || 0) + 1);
+      }
+    });
 
-  const chartData = Array.from(langMap.entries())
-    .map(([lang, count]) => ({ lang, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 15); // Top 15 languages
+    return Array.from(langMap.entries())
+      .map(([lang, count]) => ({ lang, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15); // Top 15 languages
+  }, [data]);
 
   return (
     <div className="space-y-4">

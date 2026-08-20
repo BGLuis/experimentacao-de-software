@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import Papa from 'papaparse';
 import type { RepoData } from '../types';
 
@@ -14,11 +14,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const csvPath = `${import.meta.env.BASE_URL || './'}repositorios_1000.csv`;
-    Papa.parse(csvPath, {
+    const csvUrl = 'https://raw.githubusercontent.com/BGLuis/experimentacao-de-software/main/data/repositorios_populares.csv';
+    
+    Papa.parse(csvUrl, {
       download: true,
       header: true,
       dynamicTyping: true,
+      worker: true,
       complete: (results) => {
         const parsed = (results.data as RepoData[]).filter(d => d && d.repositorio);
         setData(parsed);
@@ -31,8 +33,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const value = useMemo(() => ({ data, loading }), [data, loading]);
+
   return (
-    <DataContext.Provider value={{ data, loading }}>
+    <DataContext.Provider value={value}>
       {children}
     </DataContext.Provider>
   );
