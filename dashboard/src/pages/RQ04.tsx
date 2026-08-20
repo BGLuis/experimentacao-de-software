@@ -3,10 +3,28 @@ import { useData } from '../hooks/useData';
 import { getColorForLanguage } from '../utils/colors';
 import { Spinner } from '../components/Spinner';
 import { sampleData } from '../utils/sampling';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer , Legend} from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer , Cell} from 'recharts';
+
+
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white p-3 border border-gray-200 shadow-lg rounded-md z-50 relative">
+        <p className="text-sm font-bold text-gray-800 mb-1">Linguagem: {data.language || 'Desconhecida'}</p>
+        {payload.map((p: any, i: number) => (
+          <p key={i} className="text-sm text-gray-600">
+            <span className="font-medium">{p.name}:</span> {new Intl.NumberFormat('pt-BR').format(p.value)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function RQ04() {
-  const { filteredData: data, loading } = useData();
+  const { filteredData: data, loading, filters } = useData();
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
@@ -22,9 +40,18 @@ export default function RQ04() {
   const chartData = useMemo(() => {
     const rawData = data
     .filter(d => d.dias_desde_atualizacao != null && d.estrelas != null)
-    .map(d => ({ daysSinceUpdate: d.dias_desde_atualizacao, stars: d.estrelas, language: d.linguagens ? d.linguagens.split(',')[0].trim() : undefined }));
+    
+    .map(d => {
+      const langs = d.linguagens ? d.linguagens.split(',').map((l: string) => l.trim()) : [];
+      let lang = langs[0] || 'Desconhecida';
+      if (filters.languages.length > 0) {
+        const match = langs.find((l: string) => filters.languages.includes(l));
+        if (match) lang = match;
+      }
+      return { daysSinceUpdate: d.dias_desde_atualizacao, stars: d.estrelas, language: lang };
+    });
     return sampleData(rawData, 2000);
-  }, [data]);
+  }, [data, filters]);
 
   if (loading) {
     return (
@@ -53,17 +80,12 @@ export default function RQ04() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" dataKey="daysSinceUpdate" name="Dias desde atualização" domain={[0, 'auto']} allowDataOverflow={true} tickFormatter={(v) => `${v} dias`} label={{ value: 'Dias desde a última atualização', position: 'insideBottom', offset: -15, fill: '#64748b' }} />
                 <YAxis type="number" dataKey="stars" name="Estrelas" domain={['dataMin', 'auto']} allowDataOverflow={true} tickFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)} label={{ value: 'Número de Estrelas', angle: -90, position: 'insideLeft', offset: -20, style: { textAnchor: 'middle' }, fill: '#64748b' }} />
-                <Legend verticalAlign="top" height={36} />
-                <Tooltip cursor={{ strokeDasharray: '3 3' }} formatter={(value: any, name: any) => [new Intl.NumberFormat('pt-BR').format(Number(value) || 0), String(name)]} />
-                {Array.from(new Set(chartData.map((d: any) => d.language || 'Desconhecida'))).map(lang => (
-                  <Scatter 
-                    key={lang as string}
-                    isAnimationActive={false} 
-                    name={lang as string} 
-                    data={chartData.filter((d: any) => (d.language || 'Desconhecida') === lang)} 
-                    fill={getColorForLanguage(lang as string)} 
-                  />
-                ))}
+                <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
+                <Scatter isAnimationActive={false} name="Repositórios" data={chartData}>
+                  {chartData.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={getColorForLanguage(entry.language)} />
+                  ))}
+                </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
           )}
