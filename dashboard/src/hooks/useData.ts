@@ -2,5 +2,10 @@ import { useContext } from 'react';
 import { DataContext } from '../context/DataContext';
 
 export function useData() {
-  return useContext(DataContext);
+  const context = useContext(DataContext);
+  return {
+    ...context,
+    originalData: context.data,
+    data: context.filteredData
+  };
 }

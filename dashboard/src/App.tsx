@@ -1,7 +1,8 @@
 import { useState, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Beaker, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Beaker, Menu, X, Star } from 'lucide-react';
 import { DataProvider } from './context/DataContext';
+import { Filters } from './components/Filters';
 
 const Home = lazy(() => import('./pages/Home'));
 const RQ01 = lazy(() => import('./pages/RQ01'));
@@ -11,6 +12,10 @@ const RQ04 = lazy(() => import('./pages/RQ04'));
 const RQ05 = lazy(() => import('./pages/RQ05'));
 const RQ06 = lazy(() => import('./pages/RQ06'));
 const RQ07 = lazy(() => import('./pages/RQ07'));
+const Bonus01 = lazy(() => import('./pages/Bonus01'));
+const Bonus02 = lazy(() => import('./pages/Bonus02'));
+const Bonus03 = lazy(() => import('./pages/Bonus03'));
+const Bonus04 = lazy(() => import('./pages/Bonus04'));
 
 const navItems = [
   { path: '/', label: 'Visão Geral', icon: LayoutDashboard },
@@ -21,6 +26,10 @@ const navItems = [
   { path: '/rq05', label: 'RQ 05', icon: Beaker },
   { path: '/rq06', label: 'RQ 06', icon: Beaker },
   { path: '/rq07', label: 'RQ 07', icon: Beaker },
+  { path: '/bonus01', label: 'Bônus 01: Wiki & Tamanho', icon: Star },
+  { path: '/bonus02', label: 'Bônus 02: Fenômeno IA', icon: Star },
+  { path: '/bonus03', label: 'Bônus 03: Licenças', icon: Star },
+  { path: '/bonus04', label: 'Bônus 04: Tags & Engaj.', icon: Star },
 ];
 
 function NavigationContent({ onItemClick }: { onItemClick?: () => void }) {
@@ -32,7 +41,7 @@ function NavigationContent({ onItemClick }: { onItemClick?: () => void }) {
         <LayoutDashboard className="text-blue-400" />
         Lab Dashboard
       </h1>
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-col gap-1 overflow-y-auto max-h-[85vh] custom-scrollbar">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -116,6 +125,7 @@ function App() {
         <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
           <Sidebar />
           <main className="flex-1 p-4 md:p-8 overflow-y-auto md:h-screen w-full min-w-0">
+            <Filters />
             <Suspense fallback={<div className="p-4 flex h-full items-center justify-center text-gray-500">Carregando visualização...</div>}>
               <Routes>
                 <Route path="/" element={<Home />} />
@@ -126,6 +136,10 @@ function App() {
                 <Route path="/rq05" element={<RQ05 />} />
                 <Route path="/rq06" element={<RQ06 />} />
                 <Route path="/rq07" element={<RQ07 />} />
+                <Route path="/bonus01" element={<Bonus01 />} />
+                <Route path="/bonus02" element={<Bonus02 />} />
+                <Route path="/bonus03" element={<Bonus03 />} />
+                <Route path="/bonus04" element={<Bonus04 />} />
               </Routes>
             </Suspense>
           </main>

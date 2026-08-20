@@ -14,4 +14,17 @@ export interface RepoData {
   atualizado_em: string;
   dias_desde_atualizacao: number;
   total_commits: number;
+  
+  // Novos campos adicionados para filtros e análises bônus
+  criado_em: string;
+  possui_wiki: boolean;
+  tamanho_kb: number;
+  esta_arquivado: boolean;
+  recebe_doacoes: boolean;
+  possui_issues: boolean;
+  licenca: string;
+  tags: string;
+  issues_abertas: number;
+  e_fork: boolean;
+  descricao: string;
 }
