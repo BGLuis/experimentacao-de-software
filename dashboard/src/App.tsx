@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Beaker, Menu, X } from 'lucide-react';
 import { DataProvider } from './context/DataContext';
-import Home from './pages/Home';
-import RQ01 from './pages/RQ01';
-import RQ02 from './pages/RQ02';
-import RQ03 from './pages/RQ03';
-import RQ04 from './pages/RQ04';
-import RQ05 from './pages/RQ05';
-import RQ06 from './pages/RQ06';
-import RQ07 from './pages/RQ07';
+
+const Home = lazy(() => import('./pages/Home'));
+const RQ01 = lazy(() => import('./pages/RQ01'));
+const RQ02 = lazy(() => import('./pages/RQ02'));
+const RQ03 = lazy(() => import('./pages/RQ03'));
+const RQ04 = lazy(() => import('./pages/RQ04'));
+const RQ05 = lazy(() => import('./pages/RQ05'));
+const RQ06 = lazy(() => import('./pages/RQ06'));
+const RQ07 = lazy(() => import('./pages/RQ07'));
 
 const navItems = [
   { path: '/', label: 'Visão Geral', icon: LayoutDashboard },
@@ -115,16 +116,18 @@ function App() {
         <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
           <Sidebar />
           <main className="flex-1 p-4 md:p-8 overflow-y-auto md:h-screen w-full min-w-0">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/rq01" element={<RQ01 />} />
-              <Route path="/rq02" element={<RQ02 />} />
-              <Route path="/rq03" element={<RQ03 />} />
-              <Route path="/rq04" element={<RQ04 />} />
-              <Route path="/rq05" element={<RQ05 />} />
-              <Route path="/rq06" element={<RQ06 />} />
-              <Route path="/rq07" element={<RQ07 />} />
-            </Routes>
+            <Suspense fallback={<div className="p-4 flex h-full items-center justify-center text-gray-500">Carregando visualização...</div>}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/rq01" element={<RQ01 />} />
+                <Route path="/rq02" element={<RQ02 />} />
+                <Route path="/rq03" element={<RQ03 />} />
+                <Route path="/rq04" element={<RQ04 />} />
+                <Route path="/rq05" element={<RQ05 />} />
+                <Route path="/rq06" element={<RQ06 />} />
+                <Route path="/rq07" element={<RQ07 />} />
+              </Routes>
+            </Suspense>
           </main>
         </div>
       </HashRouter>

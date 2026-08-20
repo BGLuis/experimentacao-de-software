@@ -1,14 +1,17 @@
+import { useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function RQ04() {
   const { data, loading } = useData();
 
-  if (loading) return <div>Carregando dados...</div>;
+  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
 
-  const chartData = data
+  const chartData = useMemo(() => {
+    return data
     .filter(d => d.dias_desde_atualizacao != null && d.estrelas != null)
     .map(d => ({ daysSinceUpdate: d.dias_desde_atualizacao, stars: d.estrelas }));
+  }, [data]);
 
   return (
     <div className="space-y-4">
