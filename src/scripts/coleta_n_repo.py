@@ -422,6 +422,20 @@ def atualizar_barra_fase2(total: int):
         sleep(0.5)
 
 
+def converter_para_parquet(caminho_csv: Path) -> None:
+    caminho_parquet = caminho_csv.with_suffix('.parquet')
+    print(f"\n{Colors.GREEN}Gerando arquivo {caminho_parquet} a partir do CSV...{Colors.RESET}")
+    try:
+        import pandas as pd
+        df = pd.read_csv(caminho_csv)
+        df.to_parquet(caminho_parquet, engine='pyarrow', compression='snappy')
+        print(f"{Colors.GREEN}Conversão para Parquet concluída com sucesso!{Colors.RESET}")
+    except ImportError:
+        print(f"{Colors.RED}Aviso: 'pandas' ou 'pyarrow' não encontrados. O arquivo Parquet não foi gerado.{Colors.RESET}")
+        print(f"{Colors.YELLOW}Instale as dependências com: pip install pandas pyarrow{Colors.RESET}")
+    except Exception as e:
+        print(f"{Colors.RED}Erro ao converter para Parquet: {e}{Colors.RESET}")
+
 # --- Principal ---
 def main() -> None:
     parser = argparse.ArgumentParser(description="Coleta os repositórios mais estrelados em paralelo e extrai métricas.")
@@ -458,6 +472,7 @@ def main() -> None:
     
     if not lista_pendente:
         print(f"\n{Colors.GREEN}Todos os {len(lista_descoberta)} repositórios já foram processados!{Colors.RESET}")
+        converter_para_parquet(caminho_saida)
         return
         
     # Calcular workers
@@ -469,17 +484,24 @@ def main() -> None:
     barra_thread.start()
     
     # Executar Threads
-    with ThreadPoolExecutor(max_workers=workers) as executor:
-        futuros = {executor.submit(processar_repositorio, owner, name, gerenciador, caminho_saida): (owner, name) 
-                   for owner, name in lista_pendente}
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futuros = {executor.submit(processar_repositorio, owner, name, gerenciador, caminho_saida): (owner, name) 
+                       for owner, name in lista_pendente}
+            
+            for _ in as_completed(futuros):
+                pass  # Barra de progresso cuida da exibição
+                
+        barra_thread.join()
+                
+        tempo_total = time.time() - inicio
+        print(f"\n\n{Colors.GREEN}Coleta concluída com sucesso em {tempo_total:.2f} segundos!{Colors.RESET}")
+        converter_para_parquet(caminho_saida)
         
-        for _ in as_completed(futuros):
-            pass  # Barra de progresso cuida da exibição
-            
-    barra_thread.join()
-            
-    tempo_total = time.time() - inicio
-    print(f"\n\n{Colors.GREEN}Coleta concluída com sucesso em {tempo_total:.2f} segundos!{Colors.RESET}")
+    except KeyboardInterrupt:
+        print(f"\n\n{Colors.YELLOW}Execução interrompida pelo usuário durante a coleta.{Colors.RESET}")
+        converter_para_parquet(caminho_saida)
+        sys.exit(0)
 
 if __name__ == "__main__":
     try:
