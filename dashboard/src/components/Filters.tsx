@@ -3,6 +3,7 @@ import { useData } from '../hooks/useData';
 
 function MultiSelectDropdown({ options, selected, onChange }: { options: string[], selected: string[], onChange: (val: string[]) => void }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,6 +16,12 @@ function MultiSelectDropdown({ options, selected, onChange }: { options: string[
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
   const toggleOption = (opt: string) => {
     if (selected.includes(opt)) {
       onChange(selected.filter(s => s !== opt));
@@ -22,6 +29,8 @@ function MultiSelectDropdown({ options, selected, onChange }: { options: string[
       onChange([...selected, opt]);
     }
   };
+
+  const filteredOptions = options.filter(opt => opt.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="relative" ref={ref}>
@@ -36,27 +45,42 @@ function MultiSelectDropdown({ options, selected, onChange }: { options: string[
         <span className="text-gray-400 text-xs ml-2">▼</span>
       </button>
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto custom-scrollbar">
-          <label className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-sm font-semibold border-b">
-              <input 
-                type="checkbox" 
-                checked={selected.length === 0} 
-                onChange={() => onChange([])}
-                className="rounded border-gray-300"
-              />
-              Todas as Linguagens
-          </label>
-          {options.map(opt => (
-            <label key={opt} className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-sm">
-              <input 
-                type="checkbox" 
-                checked={selected.includes(opt)} 
-                onChange={() => toggleOption(opt)}
-                className="rounded border-gray-300"
-              />
-              <span className="truncate">{opt}</span>
+        <div className="absolute z-10 mt-1 w-64 bg-white border border-gray-300 rounded-md shadow-lg flex flex-col">
+          <div className="p-2 border-b border-gray-200 sticky top-0 bg-white z-10 rounded-t-md">
+            <input
+              type="text"
+              placeholder="Buscar linguagem..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-1.5 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="max-h-60 overflow-auto custom-scrollbar">
+            <label className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-sm font-semibold border-b">
+                <input 
+                  type="checkbox" 
+                  checked={selected.length === 0} 
+                  onChange={() => onChange([])}
+                  className="rounded border-gray-300"
+                />
+                Todas as Linguagens
             </label>
-          ))}
+            {filteredOptions.length === 0 ? (
+              <div className="p-2 text-sm text-gray-500 text-center">Nenhuma encontrada</div>
+            ) : (
+              filteredOptions.map(opt => (
+                <label key={opt} className="flex items-center gap-2 p-2 hover:bg-gray-100 cursor-pointer text-sm">
+                  <input 
+                    type="checkbox" 
+                    checked={selected.includes(opt)} 
+                    onChange={() => toggleOption(opt)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="truncate">{opt}</span>
+                </label>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
