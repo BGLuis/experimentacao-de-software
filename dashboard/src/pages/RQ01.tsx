@@ -1,10 +1,22 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
+import { Spinner } from '../components/Spinner';
 import { sampleData } from '../utils/sampling';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function RQ01() {
   const { data, loading } = useData();
+  const [isChartReady, setIsChartReady] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => setIsChartReady(true), 50);
+      return () => clearTimeout(timer);
+    } else {
+      setIsChartReady(false);
+    }
+  }, [loading]);
+
 
   const chartData = useMemo(() => {
     const rawData = data
@@ -13,8 +25,13 @@ export default function RQ01() {
     return sampleData(rawData, 2000);
   }, [data]);
 
-  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
-
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[50vh]">
+        <Spinner message="Baixando e processando 12.000 repositórios (isso ocorre apenas 1x)..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -27,15 +44,19 @@ export default function RQ01() {
         <h3 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">Idade (anos) x Estrelas</h3>
         <div className="overflow-x-auto pb-4 custom-scrollbar">
           <div className="h-[70vh] min-h-[400px] min-w-[700px] w-full">
+            {!isChartReady ? (
+            <Spinner message="Desenhando gráfico..." />
+          ) : (
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart margin={{ top: 20, right: 20, bottom: 25, left: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" dataKey="age" name="Idade (anos)" domain={[0, 'auto']} allowDataOverflow={true} tickFormatter={(v) => `${v} anos`} label={{ value: 'Idade do Repositório (Anos)', position: 'insideBottom', offset: -15, fill: '#64748b' }} />
                 <YAxis type="number" dataKey="stars" name="Estrelas" domain={['dataMin', 'auto']} allowDataOverflow={true} tickFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)} label={{ value: 'Número de Estrelas', angle: -90, position: 'insideLeft', offset: -20, style: { textAnchor: 'middle' }, fill: '#64748b' }} />
                 <Tooltip cursor={{ strokeDasharray: '3 3' }} formatter={(value: any, name: any) => [new Intl.NumberFormat('pt-BR').format(Number(value) || 0), String(name)]} />
-                <Scatter name="Repositórios" data={chartData} fill="#3b82f6" />
+                <Scatter isAnimationActive={false} name="Repositórios" data={chartData} fill="#3b82f6" />
               </ScatterChart>
             </ResponsiveContainer>
+          )}
           </div>
         </div>
       </div>

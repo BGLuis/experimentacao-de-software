@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useData } from '../hooks/useData';
+import { Spinner } from '../components/Spinner';
 import { Database, Star, GitMerge, AlertCircle } from 'lucide-react';
 
 export default function Home() {
@@ -14,8 +15,13 @@ export default function Home() {
     return { totalRepos, avgStars, avgPRs, avgIssues };
   }, [data]);
 
-  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
-
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[50vh]">
+        <Spinner message="Baixando e processando 12.000 repositórios (isso ocorre apenas 1x)..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
