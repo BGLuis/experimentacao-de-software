@@ -36,8 +36,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     async function loadData() {
       try {
         const duckdb = await import('@duckdb/duckdb-wasm');
-        const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-        const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+        const duckdb_wasm = (await import('@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url')).default;
+        const mvp_worker = (await import('@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url')).default;
+        const duckdb_wasm_eh = (await import('@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url')).default;
+        const eh_worker = (await import('@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url')).default;
+
+        const MANUAL_BUNDLES = {
+            mvp: {
+                mainModule: duckdb_wasm,
+                mainWorker: mvp_worker,
+            },
+            eh: {
+                mainModule: duckdb_wasm_eh,
+                mainWorker: eh_worker,
+            },
+        };
+
+        const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
         
         const worker = new Worker(bundle.mainWorker!);
         const logger = new duckdb.ConsoleLogger();
@@ -61,6 +76,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
         const parsed = result.toArray().map((d: any) => {
           const row = d.toJSON();
+          
+          // Convert any BigInt values from Parquet/Arrow into standard JS Numbers
+          for (const key in row) {
+            if (typeof row[key] === 'bigint') {
+              row[key] = Number(row[key]);
+            }
+          }
+
           const getIsoString = (val: any) => val instanceof Date ? val.toISOString() : String(val || '');
           return {
             ...row,
