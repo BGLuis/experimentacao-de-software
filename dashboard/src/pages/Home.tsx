@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
 import { useData } from '../hooks/useData';
+import { Spinner } from '../components/Spinner';
 import { Database, Star, GitMerge, AlertCircle } from 'lucide-react';
 
 export default function Home() {
   const { data, loading } = useData();
-
-  if (loading) return <div>Carregando dados (12k repositórios)...</div>;
 
   const { totalRepos, avgStars, avgPRs, avgIssues } = useMemo(() => {
     const validData = data.filter(d => d.repositorio);
@@ -15,6 +14,14 @@ export default function Home() {
     const avgIssues = validData.reduce((acc, curr) => acc + (curr.issues_total || 0), 0) / (totalRepos || 1);
     return { totalRepos, avgStars, avgPRs, avgIssues };
   }, [data]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[50vh]">
+        <Spinner message="Baixando e processando 12.000 repositórios (isso ocorre apenas 1x)..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
