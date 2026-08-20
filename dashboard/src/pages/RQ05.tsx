@@ -22,7 +22,10 @@ export default function RQ05() {
     
     data.forEach(d => {
       if (d.linguagens) {
-        langMap.set(d.linguagens, (langMap.get(d.linguagens) || 0) + 1);
+        const langs = d.linguagens.split(',').map((l: string) => l.trim()).filter(Boolean);
+        langs.forEach((lang: string) => {
+          langMap.set(lang, (langMap.get(lang) || 0) + 1);
+        });
       }
     });
 
