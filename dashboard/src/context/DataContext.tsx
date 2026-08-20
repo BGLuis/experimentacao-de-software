@@ -37,7 +37,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       dynamicTyping: true,
       worker: true,
       complete: (results) => {
-        const parsed = (results.data as RepoData[]).filter(d => d && d.repositorio);
+        const parsed = (results.data as RepoData[])
+          .filter(d => d && d.repositorio)
+          .map(d => {
+            const getIsoString = (val: any) => val instanceof Date ? val.toISOString() : String(val || '');
+            return {
+              ...d,
+              esta_arquivado: String(d.esta_arquivado).toLowerCase() === 'true',
+              possui_wiki: String(d.possui_wiki).toLowerCase() === 'true',
+              recebe_doacoes: String(d.recebe_doacoes).toLowerCase() === 'true',
+              possui_issues: String(d.possui_issues).toLowerCase() === 'true',
+              e_fork: String(d.e_fork).toLowerCase() === 'true',
+              criado_em: getIsoString(d.criado_em),
+              atualizado_em: getIsoString(d.atualizado_em)
+            };
+          });
         setData(parsed);
         setLoading(false);
       },

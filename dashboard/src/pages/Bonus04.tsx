@@ -15,7 +15,7 @@ export default function Bonus04() {
       const primaryLang = langsArray[0];
 
       if (d.tags) {
-        const repoTags = d.tags.split(',').map(t => t.trim()).filter(Boolean);
+        const repoTags = String(d.tags).split(',').map(t => t.trim()).filter(Boolean);
         
         repoTags.forEach(tag => {
           // Global tags

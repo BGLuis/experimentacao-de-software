@@ -12,7 +12,7 @@ export default function Bonus02() {
     const aiLangs: Record<string, number> = {};
 
     data.forEach(d => {
-      const isAi = d.tags && d.tags.toLowerCase().match(/ai|ml|llm|gpt|machine learning|artificial intelligence/);
+      const isAi = d.tags && String(d.tags).toLowerCase().match(/\b(ai|ml|llm|gpt|machine learning|artificial intelligence)\b/);
       
       if (isAi) {
         totalAi++;
