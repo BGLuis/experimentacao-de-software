@@ -4,7 +4,7 @@ import { Spinner } from '../components/Spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function RQ05() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading } = useData();
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {

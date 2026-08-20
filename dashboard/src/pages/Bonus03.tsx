@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus03() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading } = useData();
 
   const licStats = useMemo(() => {
     const licenses: Record<string, any> = {};

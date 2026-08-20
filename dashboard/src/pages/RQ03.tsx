@@ -1,11 +1,12 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
+import { getColorForLanguage } from '../utils/colors';
 import { Spinner } from '../components/Spinner';
 import { sampleData } from '../utils/sampling';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer , Cell} from 'recharts';
 
 export default function RQ03() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading } = useData();
   const [isChartReady, setIsChartReady] = useState(false);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function RQ03() {
   const chartData = useMemo(() => {
     const rawData = data
     .filter(d => d.releases != null && d.estrelas != null)
-    .map(d => ({ releases: d.releases, stars: d.estrelas }));
+    .map(d => ({ releases: d.releases, stars: d.estrelas, language: d.linguagens ? d.linguagens.split(',')[0].trim() : undefined }));
     return sampleData(rawData, 2000);
   }, [data]);
 
@@ -53,7 +54,11 @@ export default function RQ03() {
                 <XAxis type="number" dataKey="releases" name="Releases" domain={[0, 'auto']} allowDataOverflow={true} tickFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)} label={{ value: 'Quantidade de Releases', position: 'insideBottom', offset: -15, fill: '#64748b' }} />
                 <YAxis type="number" dataKey="stars" name="Estrelas" domain={['dataMin', 'auto']} allowDataOverflow={true} tickFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)} label={{ value: 'Número de Estrelas', angle: -90, position: 'insideLeft', offset: -20, style: { textAnchor: 'middle' }, fill: '#64748b' }} />
                 <Tooltip cursor={{ strokeDasharray: '3 3' }} formatter={(value: any, name: any) => [new Intl.NumberFormat('pt-BR').format(Number(value) || 0), String(name)]} />
-                <Scatter isAnimationActive={false} name="Repositórios" data={chartData} fill="#8b5cf6" />
+                <Scatter isAnimationActive={false} name="Repositórios" data={chartData}>
+                  {chartData.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={getColorForLanguage(entry.language)} />
+                  ))}
+                </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
           )}

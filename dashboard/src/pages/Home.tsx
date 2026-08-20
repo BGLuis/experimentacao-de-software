@@ -4,7 +4,7 @@ import { Spinner } from '../components/Spinner';
 import { Database, Star, GitMerge, AlertCircle } from 'lucide-react';
 
 export default function Home() {
-  const { data, loading } = useData();
+  const { filteredData: data, loading } = useData();
 
   const { totalRepos, avgStars, avgPRs, avgIssues } = useMemo(() => {
     const validData = data.filter(d => d.repositorio);
