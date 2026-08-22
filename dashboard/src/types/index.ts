@@ -15,7 +15,7 @@ export interface RepoData {
   dias_desde_atualizacao: number;
   total_commits: number;
   
-  // Novos campos adicionados para filtros e análises bônus
+  // Campos adicionados para filtros e análises bônus
   criado_em: string;
   possui_wiki: boolean;
   tamanho_kb: number;
@@ -28,3 +28,26 @@ export interface RepoData {
   e_fork: boolean;
   descricao: string;
 }
+
+export interface FilterState {
+  languages: string[];
+  yearStart: string;
+  yearEnd: string;
+  repoType: 'all' | 'code_only' | 'docs_only';
+}
+
+export interface MetadataInfo {
+  total_repos: number;
+  languages: string[];
+  years: string[];
+  parquet_size_mb?: number;
+}
+
+export interface DownloadProgress {
+  loadedBytes: number;
+  totalBytes: number;
+  percentage: number;
+  status: 'fetching_meta' | 'downloading' | 'initializing_duckdb' | 'ready' | 'error';
+  message: string;
+}
+

@@ -1,63 +1,108 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
-import { getColorForLanguage } from '../utils/colors';
 import { Spinner } from '../components/Spinner';
-import { sampleData } from '../utils/sampling';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer , Cell} from 'recharts';
-
-
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white p-3 border border-gray-200 shadow-lg rounded-md z-50 relative">
-        <p className="text-sm font-bold text-gray-800 mb-1">Linguagem: {data.language || 'Desconhecida'}</p>
-        {payload.map((p: any, i: number) => (
-          <p key={i} className="text-sm text-gray-600">
-            <span className="font-medium">{p.name}:</span> {new Intl.NumberFormat('pt-BR').format(p.value)}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
+import { CanvasScatterChart, type CanvasScatterPoint } from '../components/CanvasScatterChart';
+import { StatsSummaryCard, type StatsSummary } from '../components/StatsSummaryCard';
 
 export default function RQ07() {
-  const { filteredData: data, loading, filters } = useData();
-  const [isChartReady, setIsChartReady] = useState(false);
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, filters } = useData();
+  const [loading, setLoading] = useState(true);
+  const [rawData, setRawData] = useState<CanvasScatterPoint[]>([]);
+  const [stats, setStats] = useState<StatsSummary>({
+    count: 0,
+    avgX: 0,
+    medianX: 0,
+    q1X: 0,
+    q3X: 0,
+    minX: 0,
+    maxX: 0,
+    avgY: 0,
+    medianY: 0,
+    q1Y: 0,
+    q3Y: 0
+  });
 
   useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => setIsChartReady(true), 50);
-      return () => clearTimeout(timer);
-    } else {
-      setIsChartReady(false);
-    }
-  }, [loading]);
+    let active = true;
+    if (contextLoading) return;
 
+    async function loadData() {
+      setLoading(true);
+      try {
+        const where = buildWhereClause(["razao_issues_fechadas IS NOT NULL", "estrelas IS NOT NULL"]);
 
-  const chartData = useMemo(() => {
-    const rawData = data
-    .filter(d => d.razao_issues_fechadas != null && d.estrelas != null)
-    
-    .map(d => {
-      const langs = d.linguagens ? d.linguagens.split(',').map((l: string) => l.trim()) : [];
-      let lang = langs[0] || 'Desconhecida';
-      if (filters.languages.length > 0) {
-        const match = langs.find((l: string) => filters.languages.includes(l));
-        if (match) lang = match;
+        // 1. Fetch 100% of all points for Canvas rendering
+        const pointsSql = `
+          SELECT 
+            round(coalesce(razao_issues_fechadas, 0) * 100, 2) as x,
+            estrelas as y,
+            linguagens
+          FROM repos
+          ${where}
+        `;
+        const points = await runQuery<{ x: number; y: number; linguagens: string }>(pointsSql);
+
+        // 2. Fetch Exact Descriptive Statistics on 100% of the dataset
+        const statsSql = `
+          WITH calc AS (
+            SELECT 
+              coalesce(razao_issues_fechadas, 0) * 100 as ratio,
+              estrelas
+            FROM repos
+            ${where}
+          )
+          SELECT 
+            count(*) as count,
+            coalesce(avg(ratio), 0) as avgX,
+            coalesce(median(ratio), 0) as medianX,
+            coalesce(quantile_cont(ratio, 0.25), 0) as q1X,
+            coalesce(quantile_cont(ratio, 0.75), 0) as q3X,
+            coalesce(min(ratio), 0) as minX,
+            coalesce(max(ratio), 0) as maxX,
+            coalesce(avg(estrelas), 0) as avgY,
+            coalesce(median(estrelas), 0) as medianY,
+            coalesce(quantile_cont(estrelas, 0.25), 0) as q1Y,
+            coalesce(quantile_cont(estrelas, 0.75), 0) as q3Y
+          FROM calc
+        `;
+        const statsRes = await runQuery<StatsSummary>(statsSql);
+
+        if (active) {
+          setRawData(points.map(p => {
+            const langs = p.linguagens ? p.linguagens.split(',').map((l: string) => l.trim()) : [];
+            let lang = langs[0] || 'Desconhecida';
+            if (filters.languages && filters.languages.length > 0) {
+              const match = langs.find((l: string) => filters.languages.includes(l));
+              if (match) lang = match;
+            }
+            return { x: p.x, y: p.y, language: lang };
+          }));
+
+          if (statsRes[0]) {
+            setStats(statsRes[0]);
+          }
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Erro em RQ07:", err);
+        if (active) setLoading(false);
       }
-      return { ratio: Number((d.razao_issues_fechadas * 100).toFixed(2)),
-      stars: d.estrelas, language: lang };
-    });
-    return sampleData(rawData, 2000);
-  }, [data, filters]);
+    }
 
-  if (loading) {
+    loadData();
+
+    return () => { active = false; };
+  }, [contextLoading, buildWhereClause, runQuery, filters]);
+
+  const chartData = useMemo(() => rawData, [rawData]);
+
+  if (contextLoading || loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[50vh]">
-        <Spinner message="Baixando e processando 12.000 repositórios (isso ocorre apenas 1x)..." />
+        <Spinner 
+          message={downloadProgress.message || "Consultando 100% dos repositórios..."} 
+          progress={downloadProgress.percentage}
+        />
       </div>
     );
   }
@@ -68,31 +113,32 @@ export default function RQ07() {
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900">RQ 07</h2>
         <p className="text-gray-600 text-sm md:text-base">Sistemas populares têm um alto índice de Issues fechadas?</p>
       </div>
+
+      <StatsSummaryCard 
+        stats={stats}
+        xTitle="Issues Fechadas"
+        yTitle="Estrelas"
+        xUnit="%"
+        yUnit="⭐"
+        xFormatter={(v) => `${v.toFixed(1)}%`}
+        yFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)}
+      />
       
       <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
-        <h3 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">% de Issues Fechadas x Estrelas</h3>
-        <div className="overflow-x-auto pb-4 custom-scrollbar">
-          <div className="h-[70vh] min-h-[400px] min-w-[700px] w-full">
-            {!isChartReady ? (
-            <Spinner message="Desenhando gráfico..." />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 20, right: 20, bottom: 25, left: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" dataKey="ratio" name="% Issues Fechadas" unit="%" domain={[0, 100]} allowDataOverflow={true} tickFormatter={(v) => `${v}%`} label={{ value: 'Issues Fechadas (%)', position: 'insideBottom', offset: -15, fill: '#64748b' }} />
-                <YAxis type="number" dataKey="stars" name="Estrelas" domain={['dataMin', 'auto']} allowDataOverflow={true} tickFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)} label={{ value: 'Número de Estrelas', angle: -90, position: 'insideLeft', offset: -20, style: { textAnchor: 'middle' }, fill: '#64748b' }} />
-                <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
-                <Scatter isAnimationActive={false} name="Repositórios" data={chartData}>
-                  {chartData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={getColorForLanguage(entry.language)} />
-                  ))}
-                </Scatter>
-              </ScatterChart>
-            </ResponsiveContainer>
-          )}
-          </div>
-        </div>
+        <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">% de Issues Fechadas x Estrelas</h3>
+        <CanvasScatterChart
+          data={chartData}
+          xLabel="Taxa de Issues Fechadas"
+          yLabel="Número de Estrelas"
+          xUnit="%"
+          yUnit="estrelas"
+          xFormatter={(v) => `${v.toFixed(1)}%`}
+          yFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)}
+          height={500}
+        />
       </div>
     </div>
   );
 }
+
+

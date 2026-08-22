@@ -88,34 +88,19 @@ function MultiSelectDropdown({ options, selected, onChange }: { options: string[
 }
 
 export function Filters() {
-  const { data, filters, setFilters } = useData();
+  const { metadata, filters, setFilters } = useData();
 
   const availableLanguages = useMemo(() => {
-    const langs = new Set<string>();
-    data.forEach(d => {
-      if (d.linguagens) {
-        d.linguagens.split(',').forEach(l => langs.add(l.trim()));
-      }
-    });
-    return Array.from(langs).sort();
-  }, [data]);
+    return metadata?.languages || [];
+  }, [metadata]);
 
   const availableYears = useMemo(() => {
-    const years = new Set<string>();
-    data.forEach(d => {
-      if (d.criado_em) {
-        const year = String(d.criado_em).substring(0, 4);
-        if (year && !isNaN(Number(year))) {
-          years.add(year);
-        }
-      }
-    });
-    return Array.from(years).sort((a, b) => b.localeCompare(a)); // Descending
-  }, [data]);
+    return metadata?.years || [];
+  }, [metadata]);
 
-  if (data.length === 0) return null;
+  const hasActiveFilters = (filters.languages && filters.languages.length > 0) || filters.yearStart || filters.yearEnd || filters.repoType !== 'all';
 
-  const hasActiveFilters = filters.languages.length > 0 || filters.yearStart || filters.yearEnd || filters.repoType !== 'all';
+  if (!metadata && availableLanguages.length === 0) return null;
 
   return (
     <div className="bg-white p-4 mb-6 rounded-xl shadow-sm border border-gray-200 flex flex-col xl:flex-row gap-4 items-start xl:items-center flex-wrap">
@@ -172,7 +157,7 @@ export function Filters() {
       {hasActiveFilters && (
         <button
           onClick={() => setFilters({ languages: [], yearStart: '', yearEnd: '', repoType: 'all' })}
-          className="text-sm text-blue-600 hover:text-blue-800 underline ml-auto mt-2 xl:mt-0"
+          className="text-sm text-blue-600 hover:text-blue-800 underline ml-auto mt-2 xl:mt-0 cursor-pointer"
         >
           Limpar Filtros
         </button>
@@ -180,3 +165,4 @@ export function Filters() {
     </div>
   );
 }
+

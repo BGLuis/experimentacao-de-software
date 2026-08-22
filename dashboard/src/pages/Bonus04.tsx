@@ -1,64 +1,94 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus04() {
-  const { filteredData: data, loading } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress } = useData();
+  const [loading, setLoading] = useState(true);
+  const [tagStats, setTagStats] = useState({
+    topAvg: [] as any[],
+    topTotal: [] as any[],
+    topCombos: [] as any[]
+  });
 
-  const tagStats = useMemo(() => {
-    const tagsMap: Record<string, { count: number; stars: number }> = {};
-    const comboMap: Record<string, { count: number; stars: number }> = {};
+  useEffect(() => {
+    let active = true;
+    if (contextLoading) return;
 
-    data.forEach(d => {
-      const stars = d.estrelas || 0;
-      const langsArray = d.linguagens ? d.linguagens.split(',').map(l => l.trim()).filter(Boolean) : ['Nenhuma'];
-      const primaryLang = langsArray[0];
+    async function loadTagStats() {
+      setLoading(true);
+      try {
+        const where = buildWhereClause();
 
-      if (d.tags) {
-        const repoTags = String(d.tags).split(',').map(t => t.trim()).filter(Boolean);
-        
-        repoTags.forEach(tag => {
-          // Global tags
-          if (!tagsMap[tag]) tagsMap[tag] = { count: 0, stars: 0 };
-          tagsMap[tag].count++;
-          tagsMap[tag].stars += stars;
+        // 1. Tag aggregations (Avg and Total Stars)
+        const tagsSql = `
+          SELECT 
+            trim(t) as tag,
+            count(*) as count,
+            sum(estrelas) as totalStars,
+            round(avg(estrelas)) as avgStars
+          FROM (
+            SELECT estrelas, unnest(string_split(coalesce(tags, ''), ',')) as t 
+            FROM repos 
+            ${where}
+          )
+          WHERE trim(t) != ''
+          GROUP BY tag
+          HAVING count >= 20
+        `;
+        const tagsRes = await runQuery<{
+          tag: string;
+          count: number;
+          totalStars: number;
+          avgStars: number;
+        }>(tagsSql);
 
-          // Combinations (Top 3 tags to avoid exploding memory)
-          if (repoTags.indexOf(tag) < 3) {
-             const combo = `${primaryLang} + ${tag}`;
-             if (!comboMap[combo]) comboMap[combo] = { count: 0, stars: 0 };
-             comboMap[combo].count++;
-             comboMap[combo].stars += stars;
-          }
-        });
+        // 2. Language + Tag Combos
+        const combosSql = `
+          SELECT 
+            concat(coalesce(nullif(trim(string_split(coalesce(linguagens, ''), ',')[1]), ''), 'Nenhuma'), ' + ', trim(t)) as combo,
+            count(*) as count,
+            round(avg(estrelas)) as avgStars
+          FROM (
+            SELECT linguagens, estrelas, unnest(string_split(coalesce(tags, ''), ',')) as t 
+            FROM repos 
+            ${where}
+          )
+          WHERE trim(t) != ''
+          GROUP BY combo
+          HAVING count >= 15
+          ORDER BY avgStars DESC
+          LIMIT 10
+        `;
+        const combosRes = await runQuery<{ combo: string; count: number; avgStars: number }>(combosSql);
+
+        if (active) {
+          setTagStats({
+            topAvg: [...tagsRes].sort((a, b) => b.avgStars - a.avgStars).slice(0, 10),
+            topTotal: [...tagsRes].sort((a, b) => b.totalStars - a.totalStars).slice(0, 10),
+            topCombos: combosRes
+          });
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Erro em Bonus04:", err);
+        if (active) setLoading(false);
       }
-    });
+    }
 
-    const tagsArray = Object.entries(tagsMap)
-      .filter(([_, stats]) => stats.count >= 20)
-      .map(([tag, stats]) => ({
-        tag,
-        count: stats.count,
-        totalStars: stats.stars,
-        avgStars: Math.round(stats.stars / stats.count)
-      }));
+    loadTagStats();
 
-    const combosArray = Object.entries(comboMap)
-      .filter(([_, stats]) => stats.count >= 15)
-      .map(([combo, stats]) => ({
-        combo,
-        count: stats.count,
-        avgStars: Math.round(stats.stars / stats.count)
-      }));
+    return () => { active = false; };
+  }, [contextLoading, buildWhereClause, runQuery]);
 
-    return {
-      topAvg: [...tagsArray].sort((a, b) => b.avgStars - a.avgStars).slice(0, 10),
-      topTotal: [...tagsArray].sort((a, b) => b.totalStars - a.totalStars).slice(0, 10),
-      topCombos: [...combosArray].sort((a, b) => b.avgStars - a.avgStars).slice(0, 10)
-    };
-  }, [data]);
-
-  if (loading) return <Spinner message="Processando tags e correlações..." />;
+  if (contextLoading || loading) {
+    return (
+      <Spinner 
+        message={downloadProgress.message || "Processando tags e correlações..."} 
+        progress={downloadProgress.percentage}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,7 +113,7 @@ export default function Bonus04() {
                 <span className="text-sm font-medium bg-gray-100 px-2 py-0.5 rounded">{t.tag}</span>
                 <div className="text-right">
                   <span className="text-pink-700 font-bold block">{new Intl.NumberFormat('pt-BR').format(t.avgStars)} ⭐</span>
-                  <span className="text-xs text-gray-400">em {t.count} repos</span>
+                  <span className="text-xs text-gray-400">em {t.count.toLocaleString()} repos</span>
                 </div>
               </li>
             ))}
@@ -120,3 +150,4 @@ export default function Bonus04() {
     </div>
   );
 }
+
