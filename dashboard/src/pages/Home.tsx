@@ -1,27 +1,50 @@
-import { useMemo } from 'react';
 import { useData } from '../hooks/useData';
+import { useDuckDbQuery } from '../hooks/useDuckDbQuery';
 import { Spinner } from '../components/Spinner';
 import { Database, Star, GitMerge, AlertCircle } from 'lucide-react';
 
+interface HomeMetrics {
+  total_repos: number;
+  avg_stars: number;
+  avg_prs: number;
+  avg_issues: number;
+}
+
 export default function Home() {
-  const { filteredData: data, loading } = useData();
+  const { loading: contextLoading, downloadProgress } = useData();
 
-  const { totalRepos, avgStars, avgPRs, avgIssues } = useMemo(() => {
-    const validData = data.filter(d => d.repositorio);
-    const totalRepos = validData.length;
-    const avgStars = validData.reduce((acc, curr) => acc + (curr.estrelas || 0), 0) / (totalRepos || 1);
-    const avgPRs = validData.reduce((acc, curr) => acc + (curr.pull_requests_abertas || 0) + (curr.pull_requests_aceitas || 0), 0) / (totalRepos || 1);
-    const avgIssues = validData.reduce((acc, curr) => acc + (curr.issues_total || 0), 0) / (totalRepos || 1);
-    return { totalRepos, avgStars, avgPRs, avgIssues };
-  }, [data]);
+  const { data, loading: queryLoading } = useDuckDbQuery<HomeMetrics>((where) => `
+    SELECT 
+      count(*) as total_repos,
+      coalesce(avg(estrelas), 0) as avg_stars,
+      coalesce(avg(coalesce(pull_requests_abertas, 0) + coalesce(pull_requests_aceitas, 0)), 0) as avg_prs,
+      coalesce(avg(coalesce(issues_total, 0)), 0) as avg_issues
+    FROM repos
+    ${where}
+  `);
 
-  if (loading) {
+  if (contextLoading || queryLoading) {
+    const loadedMb = (downloadProgress.loadedBytes / (1024 * 1024)).toFixed(1);
+    const totalMb = (downloadProgress.totalBytes / (1024 * 1024)).toFixed(1);
+    const details = downloadProgress.totalBytes > 0 ? `${loadedMb} MB / ${totalMb} MB` : undefined;
+
     return (
       <div className="flex items-center justify-center h-full min-h-[50vh]">
-        <Spinner message="Baixando e processando 12.000 repositórios (isso ocorre apenas 1x)..." />
+        <Spinner 
+          message={downloadProgress.message || "Carregando dados dos repositórios..."} 
+          progress={downloadProgress.percentage}
+          details={details}
+        />
       </div>
     );
   }
+
+  const metrics = data[0] || {
+    total_repos: 0,
+    avg_stars: 0,
+    avg_prs: 0,
+    avg_issues: 0
+  };
 
   return (
     <div className="space-y-6">
@@ -34,7 +57,7 @@ export default function Home() {
           </div>
           <div>
             <p className="text-gray-500 text-xs md:text-sm font-medium">Total de Repositórios</p>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">{totalRepos.toLocaleString()}</p>
+            <p className="text-xl md:text-2xl font-bold text-gray-900">{metrics.total_repos.toLocaleString()}</p>
           </div>
         </div>
 
@@ -44,7 +67,7 @@ export default function Home() {
           </div>
           <div>
             <p className="text-gray-500 text-xs md:text-sm font-medium">Média de Estrelas</p>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">{Math.round(avgStars).toLocaleString()}</p>
+            <p className="text-xl md:text-2xl font-bold text-gray-900">{Math.round(metrics.avg_stars).toLocaleString()}</p>
           </div>
         </div>
 
@@ -54,7 +77,7 @@ export default function Home() {
           </div>
           <div>
             <p className="text-gray-500 text-xs md:text-sm font-medium">Média de PRs</p>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">{Math.round(avgPRs).toLocaleString()}</p>
+            <p className="text-xl md:text-2xl font-bold text-gray-900">{Math.round(metrics.avg_prs).toLocaleString()}</p>
           </div>
         </div>
 
@@ -64,10 +87,11 @@ export default function Home() {
           </div>
           <div>
             <p className="text-gray-500 text-xs md:text-sm font-medium">Média de Issues</p>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">{Math.round(avgIssues).toLocaleString()}</p>
+            <p className="text-xl md:text-2xl font-bold text-gray-900">{Math.round(metrics.avg_issues).toLocaleString()}</p>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

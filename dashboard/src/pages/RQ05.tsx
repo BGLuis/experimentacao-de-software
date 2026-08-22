@@ -1,14 +1,34 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
+import { useDuckDbQuery } from '../hooks/useDuckDbQuery';
 import { Spinner } from '../components/Spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-
-
+interface TopLangRow {
+  lang: string;
+  count: number;
+}
 
 export default function RQ05() {
-  const { filteredData: data, loading, filters } = useData();
+  const { loading: contextLoading, downloadProgress } = useData();
   const [isChartReady, setIsChartReady] = useState(false);
+
+  const { data: chartData, loading: queryLoading } = useDuckDbQuery<TopLangRow>((where) => `
+    SELECT 
+      trim(l) as lang, 
+      count(*) as count
+    FROM (
+      SELECT unnest(string_split(coalesce(linguagens, ''), ',')) as l 
+      FROM repos 
+      ${where}
+    ) 
+    WHERE trim(l) != ''
+    GROUP BY lang 
+    ORDER BY count DESC 
+    LIMIT 15
+  `);
+
+  const loading = contextLoading || queryLoading;
 
   useEffect(() => {
     if (!loading) {
@@ -19,29 +39,13 @@ export default function RQ05() {
     }
   }, [loading]);
 
-
-  const chartData = useMemo(() => {
-    const langMap = new Map<string, number>();
-    
-    data.forEach(d => {
-      if (d.linguagens) {
-        const langs = d.linguagens.split(',').map((l: string) => l.trim()).filter(Boolean);
-        langs.forEach((lang: string) => {
-          langMap.set(lang, (langMap.get(lang) || 0) + 1);
-        });
-      }
-    });
-
-    return Array.from(langMap.entries())
-      .map(([lang, count]) => ({ lang, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 15); // Top 15 languages
-  }, [data, filters]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[50vh]">
-        <Spinner message="Baixando e processando 12.000 repositórios (isso ocorre apenas 1x)..." />
+        <Spinner 
+          message={downloadProgress.message || "Consultando dados..."} 
+          progress={downloadProgress.percentage}
+        />
       </div>
     );
   }
@@ -76,3 +80,4 @@ export default function RQ05() {
     </div>
   );
 }
+

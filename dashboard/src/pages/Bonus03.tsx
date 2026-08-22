@@ -1,58 +1,104 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus03() {
-  const { filteredData: data, loading } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress } = useData();
+  const [loading, setLoading] = useState(true);
+  const [licStats, setLicStats] = useState({
+    donations: [] as any[],
+    prs: [] as any[],
+    archived: [] as any[],
+    ai: [] as any[]
+  });
 
-  const licStats = useMemo(() => {
-    const licenses: Record<string, any> = {};
-    const aiLicenses: Record<string, number> = {};
+  useEffect(() => {
+    let active = true;
+    if (contextLoading) return;
 
-    data.forEach(d => {
-      let lic = d.licenca || 'Nenhuma/Não Informada';
-      if (lic.length > 30) lic = lic.substring(0, 30) + '...';
+    async function loadLicStats() {
+      setLoading(true);
+      try {
+        const where = buildWhereClause();
 
-      if (!licenses[lic]) {
-        licenses[lic] = { count: 0, donations: 0, prTotal: 0, prAccepted: 0, archived: 0 };
+        // 1. General License stats
+        const licSql = `
+          SELECT 
+            coalesce(nullif(licenca, ''), 'Nenhuma/Não Informada') as raw_lic,
+            count(*) as count,
+            round(100.0 * sum(case when recebe_doacoes then 1 else 0 end) / nullif(count(*), 0), 1) as donationRate,
+            round(100.0 * sum(coalesce(pull_requests_aceitas, 0)) / nullif(sum(coalesce(pull_requests_abertas, 0) + coalesce(pull_requests_aceitas, 0)), 0), 1) as prAcceptance,
+            round(100.0 * sum(case when esta_arquivado then 1 else 0 end) / nullif(count(*), 0), 1) as archivedRate
+          FROM repos
+          ${where}
+          GROUP BY raw_lic
+          HAVING count >= 20
+        `;
+        const licRes = await runQuery<{
+          raw_lic: string;
+          count: number;
+          donationRate: number;
+          prAcceptance: number;
+          archivedRate: number;
+        }>(licSql);
+
+        const formattedLics = licRes.map(item => {
+          let lic = item.raw_lic;
+          if (lic.length > 30) lic = lic.substring(0, 30) + '...';
+          return {
+            lic,
+            count: item.count,
+            donationRate: String(item.donationRate ?? 0),
+            prAcceptance: String(item.prAcceptance ?? 0),
+            archivedRate: String(item.archivedRate ?? 0)
+          };
+        });
+
+        // 2. AI Licenses
+        const aiLicSql = `
+          SELECT 
+            coalesce(nullif(licenca, ''), 'Nenhuma/Não Informada') as raw_lic,
+            count(*) as count
+          FROM repos
+          ${where ? `${where} AND ` : 'WHERE '} regexp_matches(lower(coalesce(tags,'')), '(\\\\b|^)(ai|ml|llm|gpt|machine learning)(\\\\b|$)')
+          GROUP BY raw_lic
+          ORDER BY count DESC
+          LIMIT 5
+        `;
+        const aiLicRes = await runQuery<{ raw_lic: string; count: number }>(aiLicSql);
+        const topAiLics = aiLicRes.map(item => ({
+          lic: item.raw_lic.length > 30 ? item.raw_lic.substring(0, 30) + '...' : item.raw_lic,
+          count: item.count
+        }));
+
+        if (active) {
+          setLicStats({
+            donations: [...formattedLics].sort((a, b) => Number(b.donationRate) - Number(a.donationRate)).slice(0, 8),
+            prs: [...formattedLics].sort((a, b) => Number(b.prAcceptance) - Number(a.prAcceptance)).slice(0, 8),
+            archived: [...formattedLics].sort((a, b) => Number(b.archivedRate) - Number(a.archivedRate)).slice(0, 8),
+            ai: topAiLics
+          });
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Erro em Bonus03:", err);
+        if (active) setLoading(false);
       }
-      
-      licenses[lic].count++;
-      if (d.recebe_doacoes) licenses[lic].donations++;
-      if (d.esta_arquivado) licenses[lic].archived++;
-      
-      const totalPrs = (d.pull_requests_abertas || 0) + (d.pull_requests_aceitas || 0);
-      licenses[lic].prTotal += totalPrs;
-      licenses[lic].prAccepted += (d.pull_requests_aceitas || 0);
+    }
 
-      // AI Licenses
-      const isAi = d.tags && d.tags.toLowerCase().match(/ai|ml|llm|gpt|machine learning/);
-      if (isAi) {
-        aiLicenses[lic] = (aiLicenses[lic] || 0) + 1;
-      }
-    });
+    loadLicStats();
 
-    const licArray = Object.entries(licenses)
-      .filter(([_, stats]) => stats.count >= 20) // Filter to licenses with at least 20 repos for significance
-      .map(([lic, stats]) => ({
-        lic,
-        count: stats.count,
-        donationRate: (stats.donations / stats.count * 100).toFixed(1),
-        prAcceptance: stats.prTotal > 0 ? (stats.prAccepted / stats.prTotal * 100).toFixed(1) : '0.0',
-        archivedRate: (stats.archived / stats.count * 100).toFixed(1)
-      }));
+    return () => { active = false; };
+  }, [contextLoading, buildWhereClause, runQuery]);
 
-    const topAiLics = Object.entries(aiLicenses).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([l, c]) => ({ lic: l, count: c }));
-
-    return { 
-      donations: [...licArray].sort((a, b) => Number(b.donationRate) - Number(a.donationRate)).slice(0, 8),
-      prs: [...licArray].sort((a, b) => Number(b.prAcceptance) - Number(a.prAcceptance)).slice(0, 8),
-      archived: [...licArray].sort((a, b) => Number(b.archivedRate) - Number(a.archivedRate)).slice(0, 8),
-      ai: topAiLics
-    };
-  }, [data]);
-
-  if (loading) return <Spinner message="Analisando aspectos legais e licenciamento..." />;
+  if (contextLoading || loading) {
+    return (
+      <Spinner 
+        message={downloadProgress.message || "Analisando aspectos legais e licenciamento..."} 
+        progress={downloadProgress.percentage}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -117,3 +163,4 @@ export default function Bonus03() {
     </div>
   );
 }
+

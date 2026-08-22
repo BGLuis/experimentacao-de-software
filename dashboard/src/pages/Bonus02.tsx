@@ -1,57 +1,95 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus02() {
-  const { filteredData: data, loading } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress } = useData();
+  const [loading, setLoading] = useState(true);
+  const [aiStats, setAiStats] = useState({
+    totalAi: 0,
+    yearChart: [] as { year: string; count: number }[],
+    aiMarkdownRecent: [] as any[],
+    topLangs: [] as { lang: string; stars: number }[]
+  });
 
-  const aiStats = useMemo(() => {
-    let totalAi = 0;
-    const aiByYear: Record<string, number> = {};
-    const aiMarkdownRecent: any[] = [];
-    const aiLangs: Record<string, number> = {};
+  useEffect(() => {
+    let active = true;
+    if (contextLoading) return;
 
-    data.forEach(d => {
-      const isAi = d.tags && String(d.tags).toLowerCase().match(/\b(ai|ml|llm|gpt|machine learning|artificial intelligence)\b/);
-      
-      if (isAi) {
-        totalAi++;
-        
-        // By year
-        if (d.criado_em) {
-          const year = String(d.criado_em).substring(0, 4);
-          if (year && !isNaN(Number(year))) {
-            aiByYear[year] = (aiByYear[year] || 0) + 1;
-            
-            // Markdown recent (>= 2023)
-            if (Number(year) >= 2023 && d.linguagens && d.linguagens.toLowerCase().includes('markdown')) {
-              aiMarkdownRecent.push(d);
-            }
+    async function loadAiStats() {
+      setLoading(true);
+      try {
+        const where = buildWhereClause();
+        const aiCondition = "regexp_matches(lower(coalesce(tags,'')), '(\\\\b|^)(ai|ml|llm|gpt|machine learning|artificial intelligence)(\\\\b|$)')";
 
-            // Top Langs recent (>= 2024)
-            if (Number(year) >= 2024) {
-               const primaryLang = d.linguagens ? d.linguagens.split(',')[0].trim() : 'Nenhuma';
-               aiLangs[primaryLang] = (aiLangs[primaryLang] || 0) + (d.estrelas || 0);
-            }
-          }
+        // 1. By Year & Total
+        const yearSql = `
+          SELECT 
+            substring(coalesce(criado_em, ''), 1, 4) as year,
+            count(*) as count
+          FROM repos
+          ${where ? `${where} AND ${aiCondition}` : `WHERE ${aiCondition}`}
+            AND substring(coalesce(criado_em, ''), 1, 4) != ''
+          GROUP BY year
+          ORDER BY year ASC
+        `;
+        const yearRes = await runQuery<{ year: string; count: number }>(yearSql);
+        const totalAi = yearRes.reduce((acc, curr) => acc + (curr.count || 0), 0);
+
+        // 2. Top AI Languages since 2024
+        const topLangsSql = `
+          SELECT 
+            coalesce(nullif(trim(string_split(coalesce(linguagens, ''), ',')[1]), ''), 'Nenhuma') as lang,
+            sum(estrelas) as stars
+          FROM repos
+          ${where ? `${where} AND ${aiCondition}` : `WHERE ${aiCondition}`}
+            AND substring(coalesce(criado_em, ''), 1, 4) >= '2024'
+          GROUP BY lang
+          ORDER BY stars DESC
+          LIMIT 5
+        `;
+        const topLangsRes = await runQuery<{ lang: string; stars: number }>(topLangsSql);
+
+        // 3. Recent AI Markdown repos
+        const markdownSql = `
+          SELECT repositorio, descricao, estrelas, linguagens
+          FROM repos
+          ${where ? `${where} AND ${aiCondition}` : `WHERE ${aiCondition}`}
+            AND substring(coalesce(criado_em, ''), 1, 4) >= '2023'
+            AND lower(coalesce(linguagens, '')) LIKE '%markdown%'
+          ORDER BY estrelas DESC
+          LIMIT 5
+        `;
+        const markdownRes = await runQuery(markdownSql);
+
+        if (active) {
+          setAiStats({
+            totalAi,
+            yearChart: yearRes.slice(-6),
+            topLangs: topLangsRes,
+            aiMarkdownRecent: markdownRes
+          });
+          setLoading(false);
         }
+      } catch (err) {
+        console.error("Erro em Bonus02:", err);
+        if (active) setLoading(false);
       }
-    });
+    }
 
-    const yearsSorted = Object.keys(aiByYear).sort();
-    const yearChart = yearsSorted.slice(-6).map(y => ({ year: y, count: aiByYear[y] }));
+    loadAiStats();
 
-    aiMarkdownRecent.sort((a, b) => (b.estrelas || 0) - (a.estrelas || 0));
+    return () => { active = false; };
+  }, [contextLoading, buildWhereClause, runQuery]);
 
-    const topLangs = Object.entries(aiLangs)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([lang, stars]) => ({ lang, stars }));
-
-    return { totalAi, yearChart, aiMarkdownRecent: aiMarkdownRecent.slice(0, 5), topLangs };
-  }, [data]);
-
-  if (loading) return <Spinner message="Processando dados de Inteligência Artificial..." />;
+  if (contextLoading || loading) {
+    return (
+      <Spinner 
+        message={downloadProgress.message || "Processando dados de Inteligência Artificial..."} 
+        progress={downloadProgress.percentage}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -61,7 +99,7 @@ export default function Bonus02() {
       </div>
 
       <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-        <p className="text-blue-800 font-medium">Total de Repositórios Focados em IA identificados: {aiStats.totalAi}</p>
+        <p className="text-blue-800 font-medium">Total de Repositórios Focados em IA identificados: {aiStats.totalAi.toLocaleString()}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -71,7 +109,7 @@ export default function Bonus02() {
             {aiStats.yearChart.map(y => (
               <li key={y.year} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                 <span className="font-medium text-gray-700">{y.year}</span>
-                <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-bold">{y.count} repos</span>
+                <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-bold">{y.count.toLocaleString()} repos</span>
               </li>
             ))}
           </ul>
@@ -112,3 +150,4 @@ export default function Bonus02() {
     </div>
   );
 }
+
