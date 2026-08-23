@@ -34,24 +34,24 @@ export default function RQ01() {
         // 1. Fetch 100% of all points for Canvas rendering
         const pointsSql = `
           SELECT 
-            round(idade_dias / 365.25, 2) as x,
+            round(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25, 2) as x,
             estrelas as y,
             linguagens
           FROM repos
           ${where}
-        `;
+        LIMIT 10000`;
         const points = await runQuery<{ x: number; y: number; linguagens: string }>(pointsSql);
 
         // 2. Fetch Exact Descriptive Statistics on 100% of the dataset
         const statsSql = `
           SELECT 
             count(*) as count,
-            coalesce(avg(idade_dias / 365.25), 0) as avgX,
-            coalesce(median(idade_dias / 365.25), 0) as medianX,
-            coalesce(quantile_cont(idade_dias / 365.25, 0.25), 0) as q1X,
-            coalesce(quantile_cont(idade_dias / 365.25, 0.75), 0) as q3X,
-            coalesce(min(idade_dias / 365.25), 0) as minX,
-            coalesce(max(idade_dias / 365.25), 0) as maxX,
+            coalesce(avg(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25), 0) as avgX,
+            coalesce(median(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25), 0) as medianX,
+            coalesce(quantile_cont(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25, 0.25), 0) as q1X,
+            coalesce(quantile_cont(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25, 0.75), 0) as q3X,
+            coalesce(min(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25), 0) as minX,
+            coalesce(max(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25), 0) as maxX,
             coalesce(avg(estrelas), 0) as avgY,
             coalesce(median(estrelas), 0) as medianY,
             coalesce(quantile_cont(estrelas, 0.25), 0) as q1Y,

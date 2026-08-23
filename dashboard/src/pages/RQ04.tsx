@@ -39,7 +39,7 @@ export default function RQ04() {
             linguagens
           FROM repos
           ${where}
-        `;
+        LIMIT 10000`;
         const points = await runQuery<{ x: number; y: number; linguagens: string }>(pointsSql);
 
         // 2. Fetch Exact Descriptive Statistics on 100% of the dataset

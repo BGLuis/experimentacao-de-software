@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
-import { useDuckDbQuery } from '../hooks/useDuckDbQuery';
+import { useQuery } from '../hooks/useQuery';
 import { Spinner } from '../components/Spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -13,7 +13,7 @@ export default function RQ05() {
   const { loading: contextLoading, downloadProgress } = useData();
   const [isChartReady, setIsChartReady] = useState(false);
 
-  const { data: chartData, loading: queryLoading } = useDuckDbQuery<TopLangRow>((where) => `
+  const { data: chartData, loading: queryLoading } = useQuery<TopLangRow>((where) => `
     SELECT 
       trim(l) as lang, 
       count(*) as count
