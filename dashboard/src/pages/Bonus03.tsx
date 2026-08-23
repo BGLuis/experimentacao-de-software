@@ -60,7 +60,7 @@ export default function Bonus03() {
             coalesce(nullif(licenca, ''), 'Nenhuma/Não Informada') as raw_lic,
             count(*) as count
           FROM repos
-          ${where ? `${where} AND ` : 'WHERE '} regexp_matches(lower(coalesce(tags,'')), '(\\\\b|^)(ai|ml|llm|gpt|machine learning)(\\\\b|$)')
+            ${where ? `${where} AND ` : 'WHERE '} regexp_matches(lower(coalesce(tags,'')), '(\\b|^)(ai|ml|llm|gpt|machine learning)(\\b|$)')
           GROUP BY raw_lic
           ORDER BY count DESC
           LIMIT 5

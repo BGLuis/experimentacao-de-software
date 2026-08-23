@@ -20,16 +20,16 @@ export default function Bonus02() {
       setLoading(true);
       try {
         const where = buildWhereClause();
-        const aiCondition = "regexp_matches(lower(coalesce(tags,'')), '(\\\\b|^)(ai|ml|llm|gpt|machine learning|artificial intelligence)(\\\\b|$)')";
+        const aiCondition = "regexp_matches(lower(coalesce(tags,'')), '(\\b|^)(ai|ml|llm|gpt|machine learning|artificial intelligence)(\\b|$)')";
 
         // 1. By Year & Total
         const yearSql = `
           SELECT 
-            substring(coalesce(criado_em, ''), 1, 4) as year,
+            substring(CAST(criado_em AS VARCHAR), 1, 4) as year,
             count(*) as count
           FROM repos
           ${where ? `${where} AND ${aiCondition}` : `WHERE ${aiCondition}`}
-            AND substring(coalesce(criado_em, ''), 1, 4) != ''
+            AND substring(CAST(criado_em AS VARCHAR), 1, 4) != ''
           GROUP BY year
           ORDER BY year ASC
         `;
@@ -43,7 +43,7 @@ export default function Bonus02() {
             sum(estrelas) as stars
           FROM repos
           ${where ? `${where} AND ${aiCondition}` : `WHERE ${aiCondition}`}
-            AND substring(coalesce(criado_em, ''), 1, 4) >= '2024'
+            AND substring(CAST(criado_em AS VARCHAR), 1, 4) >= '2024'
           GROUP BY lang
           ORDER BY stars DESC
           LIMIT 5
@@ -55,7 +55,7 @@ export default function Bonus02() {
           SELECT repositorio, descricao, estrelas, linguagens
           FROM repos
           ${where ? `${where} AND ${aiCondition}` : `WHERE ${aiCondition}`}
-            AND substring(coalesce(criado_em, ''), 1, 4) >= '2023'
+            AND substring(CAST(criado_em AS VARCHAR), 1, 4) >= '2023'
             AND lower(coalesce(linguagens, '')) LIKE '%markdown%'
           ORDER BY estrelas DESC
           LIMIT 5

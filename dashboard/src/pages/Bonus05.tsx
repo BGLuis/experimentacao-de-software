@@ -23,11 +23,11 @@ export default function Bonus05() {
         const where = buildWhereClause();
         const sql = `
           SELECT 
-            substring(criado_em, 1, 4) as year,
+            substring(CAST(criado_em AS VARCHAR), 1, 4) as year,
             trim(string_split(coalesce(linguagens, 'Desconhecida'), ',')[1]) as lang,
             count(*) as count
           FROM repos
-          ${where ? `${where} AND ` : 'WHERE '} criado_em IS NOT NULL AND substring(criado_em, 1, 4) != ''
+          ${where ? `${where} AND ` : 'WHERE '} criado_em IS NOT NULL AND substring(CAST(criado_em AS VARCHAR), 1, 4) != ''
           GROUP BY year, lang
           ORDER BY year ASC, count DESC
         `;
