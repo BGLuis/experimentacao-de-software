@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useData } from './useData';
 
-export function useDuckDbQuery<T = any>(
+export function useQuery<T = any>(
   queryBuilder: (whereClause: string) => string
 ) {
   const { runQuery, buildWhereClause, loading, filters } = useData();
@@ -40,7 +40,7 @@ export function useDuckDbQuery<T = any>(
     return () => {
       active = false;
     };
-  }, [loading, filters, buildWhereClause, runQuery, queryBuilder]);
+  }, [loading, filters, buildWhereClause, runQuery, ]); // Removed queryBuilder to prevent infinite loop
 
   return { data, loading: loading || queryLoading, error };
 }

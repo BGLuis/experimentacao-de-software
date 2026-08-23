@@ -31,14 +31,13 @@ export const DataContext = createContext<DataContextType>({
   buildWhereClause: () => ''
 });
 
-async function fetchParquetWithCache(
+async function fetchDataWithCache(
   urls: string[], 
   onProgress: (loaded: number, total: number, message: string) => void
 ): Promise<Uint8Array> {
-  const CACHE_NAME = 'dashboard-parquet-cache-v2';
-  const CACHE_KEY = 'repositorios_populares.parquet';
+  const CACHE_NAME = 'dashboard-csv-cache-v1';
+  const CACHE_KEY = 'repositorios_populares_1000.csv';
 
-  // 1. Try Cache API first for 0ms load time on reload
   try {
     if (typeof window !== 'undefined' && 'caches' in window) {
       const cache = await caches.open(CACHE_NAME);
@@ -54,7 +53,6 @@ async function fetchParquetWithCache(
     console.warn("Cache API check failed:", err);
   }
 
-  // 2. Try fetching from URL candidates (local public folder first, then remote CDN)
   for (const url of urls) {
     try {
       onProgress(0, 0, `Conectando a fonte de dados...`);
@@ -65,7 +63,7 @@ async function fetchParquetWithCache(
       }
 
       const contentLengthHeader = response.headers.get('Content-Length');
-      const total = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 25 * 1024 * 1024;
+      const total = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 5 * 1024 * 1024;
       
       const reader = response.body?.getReader();
       if (!reader) {
@@ -96,14 +94,13 @@ async function fetchParquetWithCache(
         offset += chunk.length;
       }
 
-      // Store in Cache API for instant subsequent visits
       try {
         if (typeof window !== 'undefined' && 'caches' in window) {
           const cache = await caches.open(CACHE_NAME);
           await cache.put(
             CACHE_KEY, 
             new Response(combinedBuffer.buffer, {
-              headers: { 'Content-Type': 'application/vnd.apache.parquet' }
+              headers: { 'Content-Type': 'text/csv' }
             })
           );
         }
@@ -139,13 +136,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const connRef = useRef<any>(null);
 
-  // 1. Fetch metadata.json immediately for instant UI initialization (< 20ms)
   useEffect(() => {
     async function loadMetadata() {
       const metaUrls = [
         './data/metadata.json',
-        'data/metadata.json',
-        'https://raw.githubusercontent.com/BGLuis/experimentacao-de-software/main/data/metadata.json'
+        'data/metadata.json'
       ];
 
       for (const url of metaUrls) {
@@ -164,7 +159,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loadMetadata();
   }, []);
 
-  // 2. Initialize DuckDB-WASM and load Parquet into table
   useEffect(() => {
     let active = true;
 
@@ -176,13 +170,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
           message: 'Iniciando download dos dados...'
         }));
 
-        const parquetUrls = [
-          './data/repositorios_populares.parquet',
-          'data/repositorios_populares.parquet',
-          'https://raw.githubusercontent.com/BGLuis/experimentacao-de-software/main/data/repositorios_populares.parquet'
+        const dataUrls = [
+          './data/repositorios_populares_1000.csv',
+          'data/repositorios_populares_1000.csv'
         ];
 
-        const parquetBuffer = await fetchParquetWithCache(parquetUrls, (loaded, total, message) => {
+        const dataBuffer = await fetchDataWithCache(dataUrls, (loaded, total, message) => {
           if (!active) return;
           const percentage = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
           setDownloadProgress({
@@ -197,11 +190,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (!active) return;
 
         setDownloadProgress({
-          loadedBytes: parquetBuffer.byteLength,
-          totalBytes: parquetBuffer.byteLength,
+          loadedBytes: dataBuffer.byteLength,
+          totalBytes: dataBuffer.byteLength,
           percentage: 100,
           status: 'initializing_duckdb',
-          message: 'Inicializando motor DuckDB WASM...'
+          message: 'Preparando leitura de dados (CSV)...'
         });
 
         const duckdb = await import('@duckdb/duckdb-wasm');
@@ -228,21 +221,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
         await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
         const conn = await db.connect();
 
-        // Register the in-memory parquet buffer
-        await db.registerFileBuffer('repos.parquet', parquetBuffer);
+        await db.registerFileBuffer('repos.csv', dataBuffer);
 
-        // Create table
         await conn.query(`
           CREATE TABLE repos AS 
-          SELECT * FROM read_parquet('repos.parquet')
+          SELECT * FROM read_csv_auto('repos.csv')
         `);
 
         if (!active) return;
 
         connRef.current = conn;
         setDownloadProgress({
-          loadedBytes: parquetBuffer.byteLength,
-          totalBytes: parquetBuffer.byteLength,
+          loadedBytes: dataBuffer.byteLength,
+          totalBytes: dataBuffer.byteLength,
           percentage: 100,
           status: 'ready',
           message: 'Pronto!'
@@ -307,10 +298,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     // Year range filter
     if (filters.yearStart) {
-      conditions.push(`substring(coalesce(criado_em, ''), 1, 4) >= '${filters.yearStart.replace(/'/g, "''")}'`);
+      conditions.push(`substring(CAST(criado_em AS VARCHAR), 1, 4) >= '${filters.yearStart.replace(/'/g, "''")}'`);
     }
     if (filters.yearEnd) {
-      conditions.push(`substring(coalesce(criado_em, ''), 1, 4) <= '${filters.yearEnd.replace(/'/g, "''")}'`);
+      conditions.push(`substring(CAST(criado_em AS VARCHAR), 1, 4) <= '${filters.yearEnd.replace(/'/g, "''")}'`);
     }
 
     // Repository Type filter
