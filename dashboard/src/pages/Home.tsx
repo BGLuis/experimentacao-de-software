@@ -14,8 +14,22 @@ interface HomeMetrics {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900 text-white p-3 rounded-lg shadow-xl text-sm border border-slate-700">
+        <p className="font-semibold mb-1">{payload[0].name || payload[0].payload.category}</p>
+        <p className="text-slate-300">
+          Total: <span className="text-white font-bold">{payload[0].value.toLocaleString()}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function Home() {
-  const { loading: contextLoading } = useData();
+  const { loading: contextLoading, datasetMode } = useData();
 
   // Metrics query
   const buildMetricsQuery = useCallback((where: string) => `
@@ -65,33 +79,21 @@ export default function Home() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[50vh]">
-        <Spinner message="Processando Dashboard (CSV)..." />
+        <Spinner message="Processando Dashboard..." />
       </div>
     );
   }
 
   const metrics = metricsData?.[0] || { total_repos: 0, avg_stars: 0, avg_prs: 0, avg_issues: 0 };
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-900 text-white p-3 rounded-lg shadow-xl text-sm border border-slate-700">
-          <p className="font-semibold mb-1">{payload[0].name || payload[0].payload.category}</p>
-          <p className="text-slate-300">
-            Total: <span className="text-white font-bold">{payload[0].value.toLocaleString()}</span>
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Visão Geral do Ecossistema</h2>
-          <p className="text-slate-500 mt-1">Análise consolidada de 1.000 repositórios no GitHub</p>
+          <p className="text-slate-500 mt-1">
+            Análise consolidada de {datasetMode === 'full' ? '202.017' : '1.000'} repositórios no GitHub
+          </p>
         </div>
       </div>
       
