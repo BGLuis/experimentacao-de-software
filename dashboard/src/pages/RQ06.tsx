@@ -5,7 +5,7 @@ import { CanvasScatterChart, type CanvasScatterPoint } from '../components/Canva
 import { StatsSummaryCard, type StatsSummary } from '../components/StatsSummaryCard';
 
 export default function RQ06() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, filters } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, filters, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [rawData, setRawData] = useState<CanvasScatterPoint[]>([]);
   const [stats, setStats] = useState<StatsSummary>({
@@ -96,7 +96,7 @@ export default function RQ06() {
     loadData();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery, filters]);
+  }, [contextLoading, buildWhereClause, runQuery, filters, datasetMode]);
 
   const chartData = useMemo(() => rawData, [rawData]);
 
