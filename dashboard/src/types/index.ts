@@ -36,11 +36,21 @@ export interface FilterState {
   repoType: 'all' | 'code_only' | 'docs_only';
 }
 
+export type DatasetMode = '1000' | 'full';
+
 export interface MetadataInfo {
   total_repos: number;
   languages: string[];
   years: string[];
   parquet_size_mb?: number;
+}
+
+export interface BackgroundProgress {
+  loadedBytes: number;
+  totalBytes: number;
+  percentage: number;
+  isDownloading: boolean;
+  message: string;
 }
 
 export interface DownloadProgress {
