@@ -72,7 +72,15 @@ function MultiSelectDropdown({ options, selected, onChange }: { options: string[
 }
 
 export function Filters() {
-  const { metadata, filters, setFilters } = useData();
+  const { 
+    metadata, 
+    filters, 
+    setFilters, 
+    datasetMode, 
+    setDatasetMode, 
+    fullDataReady, 
+    backgroundProgress 
+  } = useData();
   const availableLanguages = useMemo(() => metadata?.languages || [], [metadata]);
   const availableYears = useMemo(() => metadata?.years || [], [metadata]);
   const hasActiveFilters = (filters.languages && filters.languages.length > 0) || filters.yearStart || filters.yearEnd || filters.repoType !== 'all';
@@ -81,22 +89,85 @@ export function Filters() {
 
   return (
     <div className="bg-white p-5 md:p-6 mb-8 rounded-2xl shadow-sm border border-slate-200">
-      <div className="flex items-center gap-2 mb-5 pb-4 border-b border-slate-100">
-        <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-          <Filter size={20} />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+            <Filter size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-800 text-lg leading-tight">Filtros & Dataset</h3>
+            <span className="text-xs text-slate-400">
+              {datasetMode === 'full' 
+                ? `${(metadata?.total_repos || 202017).toLocaleString('pt-BR')} repositórios disponíveis`
+                : 'Amostra rápida de 1.000 repositórios'}
+            </span>
+          </div>
         </div>
-        <h3 className="font-bold text-slate-800 text-lg">Filtros de Análise</h3>
-        
-        {hasActiveFilters && (
-          <button
-            onClick={() => setFilters({ languages: [], yearStart: '', yearEnd: '', repoType: 'all' })}
-            className="ml-auto flex items-center gap-1.5 text-sm font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <X size={16} />
-            <span className="hidden sm:inline">Limpar filtros</span>
-          </button>
-        )}
+
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Dataset Mode Toggle */}
+          <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setDatasetMode('1000')}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                datasetMode === '1000'
+                  ? 'bg-white text-blue-700 shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>⚡ 1.000 (Rápido)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDatasetMode('full')}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                datasetMode === 'full'
+                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>🌐 Todos (202k)</span>
+              {!fullDataReady && backgroundProgress.isDownloading && (
+                <span className="animate-spin inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full ml-1" />
+              )}
+            </button>
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              onClick={() => setFilters({ languages: [], yearStart: '', yearEnd: '', repoType: 'all' })}
+              className="flex items-center gap-1.5 text-sm font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+            >
+              <X size={16} />
+              <span className="hidden sm:inline">Limpar filtros</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Background download status bar */}
+      {backgroundProgress.isDownloading && (
+        <div className="mb-5 p-3 bg-blue-50/80 border border-blue-100 rounded-xl flex items-center justify-between gap-3 text-xs text-blue-800">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+            </span>
+            <span className="truncate">{backgroundProgress.message || 'Baixando dataset completo em segundo plano...'}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-bold">{backgroundProgress.percentage}%</span>
+            <div className="w-20 sm:w-28 bg-blue-200 rounded-full h-2 overflow-hidden">
+              <div 
+                className="bg-blue-600 h-full rounded-full transition-all duration-300"
+                style={{ width: `${backgroundProgress.percentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="flex flex-col xl:flex-row gap-5 xl:items-end">
         {/* Languages */}
