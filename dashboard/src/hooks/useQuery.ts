@@ -4,7 +4,7 @@ import { useData } from './useData';
 export function useQuery<T = any>(
   queryBuilder: (whereClause: string) => string
 ) {
-  const { runQuery, buildWhereClause, loading, filters } = useData();
+  const { runQuery, buildWhereClause, loading, filters, datasetMode } = useData();
   const [data, setData] = useState<T[]>([]);
   const [queryLoading, setQueryLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -40,7 +40,7 @@ export function useQuery<T = any>(
     return () => {
       active = false;
     };
-  }, [loading, filters, buildWhereClause, runQuery, ]); // Removed queryBuilder to prevent infinite loop
+  }, [loading, filters, datasetMode, buildWhereClause, runQuery]); // Removed queryBuilder to prevent infinite loop
 
   return { data, loading: loading || queryLoading, error };
 }
