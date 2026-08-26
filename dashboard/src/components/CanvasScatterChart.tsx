@@ -5,6 +5,8 @@ export interface CanvasScatterPoint {
   x: number;
   y: number;
   language: string;
+  repositorio?: string;
+  url?: string;
 }
 
 interface CanvasScatterChartProps {
@@ -284,6 +286,12 @@ export function CanvasScatterChart({
     setHoveredPoint(null);
   };
 
+  const handleClick = useCallback(() => {
+    if (hoveredPoint?.point.url) {
+      window.open(hoveredPoint.point.url, '_blank', 'noopener,noreferrer');
+    }
+  }, [hoveredPoint]);
+
   return (
     <div ref={containerRef} className="relative w-full overflow-hidden select-none">
       <div className="flex justify-between items-center text-xs text-gray-500 mb-2 px-1">
@@ -294,9 +302,10 @@ export function CanvasScatterChart({
       <canvas
         ref={canvasRef}
         style={{ width: dimensions.width, height: dimensions.height }}
-        className="cursor-crosshair block rounded-lg bg-white"
+        className="cursor-pointer block rounded-lg bg-white"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
       />
 
       {hoveredPoint && (
@@ -312,12 +321,13 @@ export function CanvasScatterChart({
               className="w-2.5 h-2.5 rounded-full inline-block"
               style={{ backgroundColor: getColorForLanguage(hoveredPoint.point.language) }}
             />
-            <span>{hoveredPoint.point.language || 'Desconhecida'}</span>
+            <span>{hoveredPoint.point.repositorio || hoveredPoint.point.language || 'Desconhecida'}</span>
           </div>
           <div className="text-gray-600">
             <p><span className="font-medium text-gray-700">{xLabel}:</span> {xFormatter(hoveredPoint.point.x)} {xUnit}</p>
             <p><span className="font-medium text-gray-700">{yLabel}:</span> {yFormatter(hoveredPoint.point.y)} {yUnit}</p>
           </div>
+          {hoveredPoint.point.url && <p className="mt-1 text-blue-600 font-medium">Clique para abrir o repositório</p>}
         </div>
       )}
     </div>

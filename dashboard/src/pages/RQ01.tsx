@@ -36,11 +36,11 @@ export default function RQ01() {
           SELECT 
             round(CAST(coalesce(idade_dias, '0') AS FLOAT) / 365.25, 2) as x,
             estrelas as y,
-            linguagens
+            linguagens, repositorio, url
           FROM repos
           ${where}
         LIMIT 10000`;
-        const points = await runQuery<{ x: number; y: number; linguagens: string }>(pointsSql);
+        const points = await runQuery<{ x: number; y: number; linguagens: string; repositorio: string; url: string }>(pointsSql);
 
         // 2. Fetch Exact Descriptive Statistics on 100% of the dataset
         const statsSql = `
@@ -69,7 +69,7 @@ export default function RQ01() {
               const match = langs.find((l: string) => filters.languages.includes(l));
               if (match) lang = match;
             }
-            return { x: p.x, y: p.y, language: lang };
+            return { x: p.x, y: p.y, language: lang, repositorio: p.repositorio, url: p.url };
           }));
 
           if (statsRes[0]) {
