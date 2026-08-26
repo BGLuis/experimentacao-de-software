@@ -49,8 +49,10 @@ export const DataContext = createContext<DataContextType>({
 
 const PARQUET_CACHE_NAME = 'dashboard-parquet-cache-v2';
 const PARQUET_CACHE_KEY = 'repositorios_populares.parquet';
-const CSV_CACHE_NAME = 'dashboard-csv-cache-v1';
-const CSV_CACHE_KEY = 'repositorios_populares_1000.csv';
+// Incrementar a versão quando a amostra for regenerada, evitando que o
+// navegador reutilize uma cópia antiga com menos registros.
+const CSV_CACHE_NAME = 'dashboard-csv-cache-v2';
+const CSV_CACHE_KEY = 'repositorios_populares_1000-v2.csv';
 
 const PARQUET_URLS = [
   './data/repositorios_populares.parquet',
