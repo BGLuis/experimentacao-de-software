@@ -5,7 +5,7 @@ import { Spinner } from '../components/Spinner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function Bonus05() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [isChartReady, setIsChartReady] = useState(false);
   const [chartResult, setChartResult] = useState<{
@@ -86,7 +86,7 @@ export default function Bonus05() {
     loadYearLangs();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery]);
+  }, [contextLoading, buildWhereClause, runQuery, datasetMode]);
 
   useEffect(() => {
     if (!contextLoading && !loading) {

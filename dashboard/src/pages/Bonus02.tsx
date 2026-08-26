@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus02() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [aiStats, setAiStats] = useState({
     totalAi: 0,
@@ -80,7 +80,7 @@ export default function Bonus02() {
     loadAiStats();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery]);
+  }, [contextLoading, buildWhereClause, runQuery, datasetMode]);
 
   if (contextLoading || loading) {
     return (

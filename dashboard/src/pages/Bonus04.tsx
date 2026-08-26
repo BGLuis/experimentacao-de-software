@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus04() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [tagStats, setTagStats] = useState({
     topAvg: [] as any[],
@@ -79,7 +79,7 @@ export default function Bonus04() {
     loadTagStats();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery]);
+  }, [contextLoading, buildWhereClause, runQuery, datasetMode]);
 
   if (contextLoading || loading) {
     return (

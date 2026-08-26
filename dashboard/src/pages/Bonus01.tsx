@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus01() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     wiki: {
@@ -111,7 +111,7 @@ export default function Bonus01() {
     loadStats();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery]);
+  }, [contextLoading, buildWhereClause, runQuery, datasetMode]);
 
   if (contextLoading || loading) {
     return (
