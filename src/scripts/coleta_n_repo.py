@@ -442,6 +442,7 @@ def main() -> None:
     parser.add_argument("-l", "--limit", type=int, default=10000, help="Quantidade de repositórios a buscar (padrão: 10000).")
     parser.add_argument("-o", "--output", type=str, default="data/repositorios_populares.csv", help="Caminho do CSV de saída.")
     parser.add_argument("-w", "--workers", type=int, default=None, help="Num. de workers (padrão: 3 por token disponível).")
+    parser.add_argument("--fresh", action="store_true", help="Descarta a coleta anterior e refaz todos os repositórios.")
     args = parser.parse_args()
 
     tokens = carregar_tokens()
@@ -455,6 +456,9 @@ def main() -> None:
     
     # Prepara CSV e avalia Resume (Skip)
     caminho_saida.parent.mkdir(parents=True, exist_ok=True)
+    if args.fresh and caminho_saida.exists():
+        caminho_saida.unlink()
+        print(f"{Colors.YELLOW}Coleta anterior removida; iniciando uma nova coleta.{Colors.RESET}")
     processados = ler_repositorios_processados(caminho_saida)
     if not caminho_saida.exists() or not processados:
         with caminho_saida.open("w", encoding="utf-8", newline="") as arquivo:
