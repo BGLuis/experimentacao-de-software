@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { useData } from '../hooks/useData';
-import { Filter, X, ChevronDown, Search } from 'lucide-react';
+import { Filter, X, ChevronDown, Search, AlertCircle } from 'lucide-react';
 
 function MultiSelectDropdown({ options, selected, onChange }: { options: string[], selected: string[], onChange: (val: string[]) => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -79,7 +79,8 @@ export function Filters() {
     datasetMode, 
     setDatasetMode, 
     fullDataReady, 
-    backgroundProgress 
+    backgroundProgress,
+    retryBackgroundDownload
   } = useData();
   const availableLanguages = useMemo(() => metadata?.languages || [], [metadata]);
   const availableYears = useMemo(() => metadata?.years || [], [metadata]);
@@ -121,16 +122,36 @@ export function Filters() {
 
             <button
               type="button"
-              onClick={() => setDatasetMode('full')}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              disabled={!fullDataReady && backgroundProgress.isDownloading}
+              onClick={() => {
+                if (!fullDataReady) {
+                  if (backgroundProgress.hasError) {
+                    retryBackgroundDownload();
+                  }
+                  return;
+                }
+                setDatasetMode('full');
+              }}
+              title={
+                !fullDataReady && backgroundProgress.isDownloading
+                  ? `Baixando dataset completo (${backgroundProgress.percentage}%)... Disponível em breve.`
+                  : backgroundProgress.hasError
+                    ? 'Falha no download em segundo plano. Clique para tentar novamente.'
+                    : undefined
+              }
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                 datasetMode === 'full'
-                  ? 'bg-blue-600 text-white shadow-sm font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-blue-600 text-white shadow-sm font-bold cursor-pointer'
+                  : fullDataReady
+                    ? 'text-slate-600 hover:text-slate-900 cursor-pointer'
+                    : 'text-slate-400 bg-slate-100/60 cursor-not-allowed'
               }`}
             >
               <span>🌐 Todos (202k)</span>
               {!fullDataReady && backgroundProgress.isDownloading && (
-                <span className="animate-spin inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full ml-1" />
+                <span className="text-[10px] text-blue-600 font-normal ml-0.5">
+                  ({backgroundProgress.percentage}%)
+                </span>
               )}
             </button>
           </div>
@@ -166,6 +187,22 @@ export function Filters() {
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Background download error bar */}
+      {backgroundProgress.hasError && (
+        <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-800">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertCircle size={16} className="text-amber-600 shrink-0" />
+            <span className="truncate">{backgroundProgress.message}</span>
+          </div>
+          <button
+            onClick={retryBackgroundDownload}
+            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shrink-0 cursor-pointer transition-colors"
+          >
+            Tentar Novamente
+          </button>
         </div>
       )}
       

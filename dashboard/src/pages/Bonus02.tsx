@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus02() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, datasetMode } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, isDbReady, downloadProgress, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [aiStats, setAiStats] = useState({
     totalAi: 0,
@@ -14,7 +14,7 @@ export default function Bonus02() {
 
   useEffect(() => {
     let active = true;
-    if (contextLoading) return;
+    if (contextLoading || !isDbReady) return;
 
     async function loadAiStats() {
       setLoading(true);
@@ -80,9 +80,9 @@ export default function Bonus02() {
     loadAiStats();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery, datasetMode]);
+  }, [contextLoading, isDbReady, buildWhereClause, runQuery, datasetMode]);
 
-  if (contextLoading || loading) {
+  if (contextLoading || !isDbReady || loading) {
     return (
       <Spinner 
         message={downloadProgress.message || "Processando dados de Inteligência Artificial..."} 

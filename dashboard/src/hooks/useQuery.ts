@@ -4,7 +4,7 @@ import { useData } from './useData';
 export function useQuery<T = any>(
   queryBuilder: (whereClause: string) => string
 ) {
-  const { runQuery, buildWhereClause, loading, filters, datasetMode } = useData();
+  const { runQuery, buildWhereClause, loading, isDbReady, filters, datasetMode } = useData();
   const [data, setData] = useState<T[]>([]);
   const [queryLoading, setQueryLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -12,7 +12,7 @@ export function useQuery<T = any>(
   useEffect(() => {
     let active = true;
 
-    if (loading) {
+    if (loading || !isDbReady) {
       return;
     }
 
@@ -29,7 +29,9 @@ export function useQuery<T = any>(
         }
       } catch (err: any) {
         if (active) {
+          console.error("Erro no useQuery:", err);
           setError(err);
+          setData([]);
           setQueryLoading(false);
         }
       }
@@ -40,8 +42,8 @@ export function useQuery<T = any>(
     return () => {
       active = false;
     };
-  }, [loading, filters, datasetMode, buildWhereClause, runQuery]); // Removed queryBuilder to prevent infinite loop
+  }, [loading, isDbReady, filters, datasetMode, buildWhereClause, runQuery]);
 
-  return { data, loading: loading || queryLoading, error };
+  return { data, loading: (loading || !isDbReady) ? true : queryLoading, error };
 }
 

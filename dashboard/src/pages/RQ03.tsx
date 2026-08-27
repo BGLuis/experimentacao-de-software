@@ -5,7 +5,7 @@ import { CanvasScatterChart, type CanvasScatterPoint } from '../components/Canva
 import { StatsSummaryCard, type StatsSummary } from '../components/StatsSummaryCard';
 
 export default function RQ03() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, filters, datasetMode } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, isDbReady, downloadProgress, filters, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [rawData, setRawData] = useState<CanvasScatterPoint[]>([]);
   const [stats, setStats] = useState<StatsSummary>({
@@ -24,7 +24,7 @@ export default function RQ03() {
 
   useEffect(() => {
     let active = true;
-    if (contextLoading) return;
+    if (contextLoading || !isDbReady) return;
 
     async function loadData() {
       setLoading(true);
@@ -86,11 +86,11 @@ export default function RQ03() {
     loadData();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery, filters, datasetMode]);
+  }, [contextLoading, isDbReady, buildWhereClause, runQuery, filters, datasetMode]);
 
   const chartData = useMemo(() => rawData, [rawData]);
 
-  if (contextLoading || loading) {
+  if (contextLoading || !isDbReady || loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[50vh]">
         <Spinner 
@@ -118,19 +118,25 @@ export default function RQ03() {
         yFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)}
       />
       
-      <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
-        <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">Total de Releases x Estrelas</h3>
-        <CanvasScatterChart
-          data={chartData}
-          xLabel="Quantidade de Releases"
-          yLabel="Número de Estrelas"
-          xUnit="releases"
-          yUnit="estrelas"
-          xFormatter={(v) => new Intl.NumberFormat('pt-BR').format(v)}
-          yFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)}
-          height={500}
-        />
-      </div>
+      {stats.count === 0 ? (
+        <div className="bg-white p-12 rounded-xl border border-gray-200 text-center text-gray-500">
+          Nenhum repositório encontrado com os filtros selecionados.
+        </div>
+      ) : (
+        <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200">
+          <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-800">Total de Releases x Estrelas</h3>
+          <CanvasScatterChart
+            data={chartData}
+            xLabel="Quantidade de Releases"
+            yLabel="Número de Estrelas"
+            xUnit="releases"
+            yUnit="estrelas"
+            xFormatter={(v) => new Intl.NumberFormat('pt-BR').format(v)}
+            yFormatter={(v) => new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(v)}
+            height={500}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -5,8 +5,13 @@ export interface DataContextType {
   data: RepoData[];
   filteredData: RepoData[];
   loading: boolean;
+  isDbReady: boolean;
+  initError: string | null;
+  retryInit: () => void;
+  clearCacheAndReload: () => Promise<void>;
   downloadProgress: DownloadProgress;
   backgroundProgress: BackgroundProgress;
+  retryBackgroundDownload: () => void;
   datasetMode: DatasetMode;
   setDatasetMode: (mode: DatasetMode) => Promise<void>;
   fullDataReady: boolean;
@@ -22,6 +27,10 @@ export const DataContext = createContext<DataContextType>({
   data: [], 
   filteredData: [], 
   loading: true,
+  isDbReady: false,
+  initError: null,
+  retryInit: () => {},
+  clearCacheAndReload: async () => {},
   downloadProgress: {
     loadedBytes: 0,
     totalBytes: 0,
@@ -34,8 +43,10 @@ export const DataContext = createContext<DataContextType>({
     totalBytes: 0,
     percentage: 0,
     isDownloading: false,
+    hasError: false,
     message: ''
   },
+  retryBackgroundDownload: () => {},
   datasetMode: '1000',
   setDatasetMode: async () => {},
   fullDataReady: false,
@@ -66,6 +77,33 @@ const CSV_URLS = [
   'https://raw.githubusercontent.com/BGLuis/experimentacao-de-software/main/data/repositorios_populares_1000.csv'
 ];
 
+/** Validates Parquet header magic bytes ('PAR1') and minimum viable size */
+function isParquetBufferValid(buf: Uint8Array | null | undefined): boolean {
+  if (!buf || buf.byteLength < 1024 * 1024) return false;
+  // Parquet files must begin with ASCII 'PAR1' (0x50, 0x41, 0x52, 0x31)
+  return buf[0] === 0x50 && buf[1] === 0x41 && buf[2] === 0x52 && buf[3] === 0x31;
+}
+
+/** Validates CSV header and minimum viable size */
+function isCsvBufferValid(buf: Uint8Array | null | undefined): boolean {
+  if (!buf || buf.byteLength < 500) return false;
+  const snippet = new TextDecoder().decode(buf.subarray(0, 150));
+  return snippet.toLowerCase().includes('repositorio');
+}
+
+/** Safely evicts corrupted or invalid entries from browser Cache API */
+async function evictFromCache(cacheName: string, cacheKey: string) {
+  try {
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      const cache = await caches.open(cacheName);
+      await cache.delete(cacheKey);
+      console.warn(`[Cache API] Entrada corrompida expurgada do cache: ${cacheKey}`);
+    }
+  } catch (err) {
+    console.warn(`[Cache API] Falha ao expurgar cache ${cacheKey}:`, err);
+  }
+}
+
 async function checkParquetInCache(): Promise<Uint8Array | null> {
   try {
     if (typeof window !== 'undefined' && 'caches' in window) {
@@ -73,7 +111,13 @@ async function checkParquetInCache(): Promise<Uint8Array | null> {
       const cached = await cache.match(PARQUET_CACHE_KEY);
       if (cached) {
         const buffer = await cached.arrayBuffer();
-        return new Uint8Array(buffer);
+        const u8 = new Uint8Array(buffer);
+        if (isParquetBufferValid(u8)) {
+          return u8;
+        } else {
+          console.warn("[Cache API] Arquivo Parquet em cache está incompleto ou corrompido. Descartando...");
+          await evictFromCache(PARQUET_CACHE_NAME, PARQUET_CACHE_KEY);
+        }
       }
     }
   } catch (err) {
@@ -105,7 +149,7 @@ async function fetchBufferWithProgress(
   contentType: string,
   onProgress?: (loaded: number, total: number, message: string) => void
 ): Promise<Uint8Array> {
-  // 1. Try cache
+  // 1. Try cache with validation
   try {
     if (typeof window !== 'undefined' && 'caches' in window) {
       const cache = await caches.open(cacheName);
@@ -113,8 +157,14 @@ async function fetchBufferWithProgress(
       if (cached) {
         onProgress?.(0, 0, "Lendo dados do cache local...");
         const buffer = await cached.arrayBuffer();
-        onProgress?.(buffer.byteLength, buffer.byteLength, "Dados carregados do cache!");
-        return new Uint8Array(buffer);
+        const u8 = new Uint8Array(buffer);
+        const isValid = contentType.includes('parquet') ? isParquetBufferValid(u8) : isCsvBufferValid(u8);
+        if (isValid) {
+          onProgress?.(buffer.byteLength, buffer.byteLength, "Dados carregados do cache!");
+          return u8;
+        } else {
+          await evictFromCache(cacheName, cacheKey);
+        }
       }
     }
   } catch (err) {
@@ -122,6 +172,7 @@ async function fetchBufferWithProgress(
   }
 
   // 2. Fetch from URL candidates
+  let lastError: any = null;
   for (const url of urls) {
     try {
       onProgress?.(0, 0, "Conectando à fonte de dados...");
@@ -139,10 +190,14 @@ async function fetchBufferWithProgress(
       const reader = response.body?.getReader();
       if (!reader) {
         const buffer = await response.arrayBuffer();
-        onProgress?.(buffer.byteLength, buffer.byteLength, "Download concluído!");
         const u8 = new Uint8Array(buffer);
-        saveToCache(cacheName, cacheKey, u8, contentType);
-        return u8;
+        const isValid = contentType.includes('parquet') ? isParquetBufferValid(u8) : isCsvBufferValid(u8);
+        if (isValid) {
+          onProgress?.(buffer.byteLength, buffer.byteLength, "Download concluído!");
+          saveToCache(cacheName, cacheKey, u8, contentType);
+          return u8;
+        }
+        throw new Error(`Dados inválidos recebidos de ${url}`);
       }
 
       const chunks: Uint8Array[] = [];
@@ -167,18 +222,28 @@ async function fetchBufferWithProgress(
         offset += chunk.length;
       }
 
+      const isValid = contentType.includes('parquet') ? isParquetBufferValid(combinedBuffer) : isCsvBufferValid(combinedBuffer);
+      if (!isValid) {
+        throw new Error(`O arquivo baixado de ${url} não passou na verificação de integridade.`);
+      }
+
       saveToCache(cacheName, cacheKey, combinedBuffer, contentType);
       return combinedBuffer;
     } catch (e) {
       console.warn(`Erro ao baixar de ${url}:`, e);
+      lastError = e;
     }
   }
 
-  throw new Error(`Não foi possível baixar os dados de ${cacheKey}`);
+  throw lastError || new Error(`Não foi possível baixar os dados de ${cacheKey}`);
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
+  const [isDbReady, setIsDbReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [initCounter, setInitCounter] = useState(0);
+
   const [metadata, setMetadata] = useState<MetadataInfo | null>(null);
   const [datasetMode, setDatasetModeState] = useState<DatasetMode>('1000');
   const [fullDataReady, setFullDataReady] = useState(false);
@@ -197,6 +262,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     totalBytes: 0,
     percentage: 0,
     isDownloading: false,
+    hasError: false,
     message: ''
   });
 
@@ -209,7 +275,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const dbRef = useRef<any>(null);
   const connRef = useRef<any>(null);
-  const targetModeRef = useRef<DatasetMode | null>(null);
 
   // 1. Fetch metadata.json immediately for instant UI initialization (< 20ms)
   useEffect(() => {
@@ -236,11 +301,87 @@ export function DataProvider({ children }: { children: ReactNode }) {
     loadMetadata();
   }, []);
 
-  // 2. Initialize DuckDB-WASM and load dataset (cached Parquet vs fast initial 1000 + background Parquet)
+  // Background download launcher for the full 202k dataset
+  const startBackgroundParquetDownload = useCallback(() => {
+    if (fullDataReady || !dbRef.current || !connRef.current) return;
+
+    setBackgroundProgress({
+      loadedBytes: 0,
+      totalBytes: 25 * 1024 * 1024,
+      percentage: 0,
+      isDownloading: true,
+      hasError: false,
+      message: 'Baixando dataset completo em segundo plano...'
+    });
+
+    fetchBufferWithProgress(
+      PARQUET_URLS,
+      PARQUET_CACHE_NAME,
+      PARQUET_CACHE_KEY,
+      'application/vnd.apache.parquet',
+      (loaded, total, _message) => {
+        const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+        setBackgroundProgress({
+          loadedBytes: loaded,
+          totalBytes: total,
+          percentage: pct,
+          isDownloading: true,
+          hasError: false,
+          message: `Baixando dataset completo (202k repos): ${pct}%...`
+        });
+      }
+    ).then(async (parquetBuffer) => {
+      if (!isParquetBufferValid(parquetBuffer)) {
+        throw new Error("Arquivo Parquet baixado não é válido.");
+      }
+      if (!dbRef.current || !connRef.current) return;
+
+      try {
+        await dbRef.current.registerFileBuffer('repos.parquet', parquetBuffer);
+        await connRef.current.query(`
+          CREATE TABLE repos_full AS 
+          SELECT * FROM read_parquet('repos.parquet')
+        `);
+
+        setFullDataReady(true);
+        setIsCached(true);
+        setBackgroundProgress({
+          loadedBytes: parquetBuffer.byteLength,
+          totalBytes: parquetBuffer.byteLength,
+          percentage: 100,
+          isDownloading: false,
+          hasError: false,
+          message: 'Dataset completo carregado e pronto para uso!'
+        });
+      } catch (err: any) {
+        console.error("Erro ao registrar repos_full em segundo plano:", err);
+        setBackgroundProgress(prev => ({
+          ...prev,
+          isDownloading: false,
+          hasError: true,
+          message: 'Falha ao registrar dataset completo no DuckDB.'
+        }));
+      }
+    }).catch(err => {
+      console.warn("Falha no download em segundo plano do Parquet:", err);
+      setBackgroundProgress(prev => ({
+        ...prev,
+        isDownloading: false,
+        hasError: true,
+        message: 'Não foi possível baixar o dataset completo em segundo plano.'
+      }));
+    });
+  }, [fullDataReady]);
+
+  // 2. Initialize DuckDB-WASM safely
   useEffect(() => {
     let active = true;
 
     async function initDuckDb() {
+      setLoading(true);
+      setIsDbReady(false);
+      setInitError(null);
+
       try {
         setDownloadProgress(prev => ({
           ...prev,
@@ -248,7 +389,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           message: 'Verificando cache local e inicializando motor SQL...'
         }));
 
-        // 1. Check if full Parquet is already cached
+        // 1. Check if full Parquet is already cached and valid
         const cachedParquet = await checkParquetInCache();
 
         // 2. Initialize DuckDB WASM
@@ -271,53 +412,79 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
         const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
         const worker = new Worker(bundle.mainWorker!);
+        
+        // Listen for worker crashes or out of memory events
+        worker.onerror = (e) => {
+          console.error("DuckDB WASM Worker fatal error:", e);
+          if (active) {
+            setIsDbReady(false);
+            setInitError("Ocorreu um erro no DuckDB WASM Worker (possível falta de memória do navegador).");
+          }
+        };
+
         const logger = new duckdb.ConsoleLogger();
         const db = new duckdb.AsyncDuckDB(logger, worker);
         await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
         const conn = await db.connect();
 
-        if (!active) return;
-        dbRef.current = db;
-        connRef.current = conn;
+        if (!active) {
+          await conn.close().catch(() => {});
+          return;
+        }
+
+        let fullSuccess = false;
 
         if (cachedParquet) {
-          // --- SCENARIO A: User already has full Parquet saved in cache -> Direct Full Mode (< 50ms) ---
-          setIsCached(true);
-          setDownloadProgress({
-            loadedBytes: cachedParquet.byteLength,
-            totalBytes: cachedParquet.byteLength,
-            percentage: 100,
-            status: 'initializing_duckdb',
-            message: 'Carregando dataset completo do cache local...'
-          });
+          // --- SCENARIO A: Try loading cached full dataset ---
+          try {
+            setDownloadProgress({
+              loadedBytes: cachedParquet.byteLength,
+              totalBytes: cachedParquet.byteLength,
+              percentage: 100,
+              status: 'initializing_duckdb',
+              message: 'Carregando dataset completo do cache local...'
+            });
 
-          await db.registerFileBuffer('repos.parquet', cachedParquet);
-          await conn.query(`
-            CREATE TABLE repos_full AS 
-            SELECT * FROM read_parquet('repos.parquet')
-          `);
-          await conn.query(`
-            CREATE TABLE repos_1000 AS 
-            SELECT * FROM repos_full LIMIT 1000
-          `);
-          await conn.query(`
-            CREATE OR REPLACE VIEW repos AS 
-            SELECT * FROM repos_full
-          `);
+            await db.registerFileBuffer('repos.parquet', cachedParquet);
+            await conn.query(`
+              CREATE TABLE repos_full AS 
+              SELECT * FROM read_parquet('repos.parquet')
+            `);
+            await conn.query(`
+              CREATE TABLE repos_1000 AS 
+              SELECT * FROM repos_full LIMIT 1000
+            `);
+            await conn.query(`
+              CREATE OR REPLACE VIEW repos AS 
+              SELECT * FROM repos_full
+            `);
 
-          if (!active) return;
-          setFullDataReady(true);
-          setDatasetModeState('full');
-          setDownloadProgress({
-            loadedBytes: cachedParquet.byteLength,
-            totalBytes: cachedParquet.byteLength,
-            percentage: 100,
-            status: 'ready',
-            message: 'Pronto!'
-          });
-          setLoading(false);
-        } else {
-          // --- SCENARIO B: First visit / uncached -> Load fast 1000 CSV instantly (< 100ms) + fetch Parquet in background ---
+            fullSuccess = true;
+            if (!active) return;
+
+            dbRef.current = db;
+            connRef.current = conn;
+            setIsCached(true);
+            setFullDataReady(true);
+            setDatasetModeState('full');
+            setIsDbReady(true);
+            setDownloadProgress({
+              loadedBytes: cachedParquet.byteLength,
+              totalBytes: cachedParquet.byteLength,
+              percentage: 100,
+              status: 'ready',
+              message: 'Pronto!'
+            });
+            setLoading(false);
+          } catch (cacheErr) {
+            console.warn("[Cache API] Falha ao processar Parquet do cache. Expurgando e baixando amostra...", cacheErr);
+            await evictFromCache(PARQUET_CACHE_NAME, PARQUET_CACHE_KEY);
+            fullSuccess = false;
+          }
+        }
+
+        // --- SCENARIO B: Fast initial 1000 CSV load ---
+        if (!fullSuccess) {
           setIsCached(false);
           setDownloadProgress({
             loadedBytes: 0,
@@ -359,7 +526,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
           if (!active) return;
 
+          // Gate of readiness: ONLY enable connRef and isDbReady once the 'repos' view is strictly created
+          dbRef.current = db;
+          connRef.current = conn;
           setDatasetModeState('1000');
+          setIsDbReady(true);
           setDownloadProgress({
             loadedBytes: csvBuffer.byteLength,
             totalBytes: csvBuffer.byteLength,
@@ -369,83 +540,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
           });
           setLoading(false);
 
-          // Launch non-blocking background fetch for full 202k dataset
-          setBackgroundProgress({
-            loadedBytes: 0,
-            totalBytes: 25 * 1024 * 1024,
-            percentage: 0,
-            isDownloading: true,
-            message: 'Baixando dataset completo em segundo plano...'
-          });
-
-          fetchBufferWithProgress(
-            PARQUET_URLS,
-            PARQUET_CACHE_NAME,
-            PARQUET_CACHE_KEY,
-            'application/vnd.apache.parquet',
-            (loaded, total, _message) => {
-              if (!active) return;
-              const pct = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
-              setBackgroundProgress({
-                loadedBytes: loaded,
-                totalBytes: total,
-                percentage: pct,
-                isDownloading: true,
-                message: `Baixando dataset completo (202k repos): ${pct}%...`
-              });
-            }
-          ).then(async (parquetBuffer) => {
-            if (!active || !dbRef.current || !connRef.current) return;
-            try {
-              await dbRef.current.registerFileBuffer('repos.parquet', parquetBuffer);
-              await connRef.current.query(`
-                CREATE TABLE repos_full AS 
-                SELECT * FROM read_parquet('repos.parquet')
-              `);
-
-              if (!active) return;
-              setFullDataReady(true);
-              setIsCached(true);
-              setBackgroundProgress({
-                loadedBytes: parquetBuffer.byteLength,
-                totalBytes: parquetBuffer.byteLength,
-                percentage: 100,
-                isDownloading: false,
-                message: 'Dataset completo carregado e pronto!'
-              });
-
-              // If user requested full mode while download was running, switch view now
-              if (targetModeRef.current === 'full') {
-                await connRef.current.query(`
-                  CREATE OR REPLACE VIEW repos AS 
-                  SELECT * FROM repos_full
-                `);
-                setDatasetModeState('full');
-                targetModeRef.current = null;
-              }
-            } catch (err) {
-              console.error("Erro ao registrar repos_full em segundo plano:", err);
-            }
-          }).catch(err => {
-            console.warn("Falha no download em segundo plano do Parquet:", err);
-            if (active) {
-              setBackgroundProgress(prev => ({
-                ...prev,
-                isDownloading: false,
-                message: 'Não foi possível baixar o dataset completo em segundo plano.'
-              }));
-            }
-          });
+          // Trigger background download of 202k dataset
+          startBackgroundParquetDownload();
         }
-      } catch (error) {
-        console.error("Erro ao inicializar DuckDB WASM:", error);
+      } catch (error: any) {
+        console.error("Erro fatal ao inicializar DuckDB WASM:", error);
         if (!active) return;
+        connRef.current = null;
+        setIsDbReady(false);
+        setInitError(error?.message || 'Falha na conexão com a base de dados.');
         setDownloadProgress({
           loadedBytes: 0,
           totalBytes: 0,
           percentage: 0,
           status: 'error',
-          message: 'Erro ao carregar os dados. Tente recarregar a página.'
+          message: 'Erro ao carregar os dados. Verifique sua conexão e tente novamente.'
         });
         setLoading(false);
       }
@@ -457,21 +566,40 @@ export function DataProvider({ children }: { children: ReactNode }) {
       active = false; 
       if (connRef.current) {
         connRef.current.close().catch(() => {});
+        connRef.current = null;
       }
+      setIsDbReady(false);
     };
+  }, [initCounter, startBackgroundParquetDownload]);
+
+  // Retry initialization
+  const retryInit = useCallback(() => {
+    setInitCounter(prev => prev + 1);
   }, []);
 
-  // Switch between 1000 (Amostra Rápida) and full (Dataset Completo)
+  // Clear cache and reload
+  const clearCacheAndReload = useCallback(async () => {
+    try {
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        await caches.delete(PARQUET_CACHE_NAME);
+        await caches.delete(CSV_CACHE_NAME);
+      }
+    } catch (e) {
+      console.warn("Erro ao limpar caches:", e);
+    }
+    window.location.reload();
+  }, []);
+
+  // Switch between 1000 (Amostra Rápida) and full (Dataset Completo) safely
   const setDatasetMode = useCallback(async (mode: DatasetMode) => {
     if (mode === datasetMode) return;
 
     if (mode === 'full' && !fullDataReady) {
-      targetModeRef.current = 'full';
-      setDatasetModeState('full');
+      console.warn("Tentativa de selecionar modo 'full' antes do dataset completo estar pronto.");
       return;
     }
 
-    if (!connRef.current) return;
+    if (!connRef.current || !isDbReady) return;
 
     try {
       if (mode === 'full') {
@@ -479,16 +607,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
       } else {
         await connRef.current.query(`CREATE OR REPLACE VIEW repos AS SELECT * FROM repos_1000`);
       }
-      targetModeRef.current = null;
       setDatasetModeState(mode);
     } catch (err) {
       console.error(`Erro ao alternar modo para ${mode}:`, err);
     }
-  }, [datasetMode, fullDataReady]);
+  }, [datasetMode, fullDataReady, isDbReady]);
 
-  // Helper to run parameterized SQL queries safely and return typed rows
+  // Safe SQL query execution
   const runQuery = useCallback(async <T = any>(sql: string): Promise<T[]> => {
-    if (!connRef.current) return [];
+    if (!isDbReady || !connRef.current) {
+      console.warn("runQuery chamado antes do DuckDB estar pronto:", sql);
+      return [];
+    }
     try {
       const result = await connRef.current.query(sql);
       const rows: T[] = result.toArray().map((d: any) => {
@@ -503,11 +633,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return rows;
     } catch (err) {
       console.error("Erro na execução da query SQL DuckDB:", sql, err);
-      return [];
+      throw err;
     }
-  }, []);
+  }, [isDbReady]);
 
-  // Helper to build SQL WHERE clause based on current active filters
+  // Helper to build SQL WHERE clause based on active filters
   const buildWhereClause = useCallback((extraConditions: string[] = []): string => {
     const conditions: string[] = [...extraConditions];
 
@@ -541,8 +671,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     data: [], 
     filteredData: [], 
     loading, 
+    isDbReady,
+    initError,
+    retryInit,
+    clearCacheAndReload,
     downloadProgress,
     backgroundProgress,
+    retryBackgroundDownload: startBackgroundParquetDownload,
     datasetMode,
     setDatasetMode,
     fullDataReady,
@@ -554,8 +689,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     buildWhereClause
   }), [
     loading, 
+    isDbReady,
+    initError,
+    retryInit,
+    clearCacheAndReload,
     downloadProgress, 
     backgroundProgress, 
+    startBackgroundParquetDownload,
     datasetMode, 
     setDatasetMode, 
     fullDataReady, 

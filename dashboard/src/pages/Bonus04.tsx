@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus04() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, datasetMode } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, isDbReady, downloadProgress, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [tagStats, setTagStats] = useState({
     topAvg: [] as any[],
@@ -13,7 +13,7 @@ export default function Bonus04() {
 
   useEffect(() => {
     let active = true;
-    if (contextLoading) return;
+    if (contextLoading || !isDbReady) return;
 
     async function loadTagStats() {
       setLoading(true);
@@ -79,9 +79,9 @@ export default function Bonus04() {
     loadTagStats();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery, datasetMode]);
+  }, [contextLoading, isDbReady, buildWhereClause, runQuery, datasetMode]);
 
-  if (contextLoading || loading) {
+  if (contextLoading || !isDbReady || loading) {
     return (
       <Spinner 
         message={downloadProgress.message || "Processando tags e correlações..."} 

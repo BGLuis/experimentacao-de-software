@@ -29,7 +29,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export default function Home() {
-  const { loading: contextLoading, datasetMode } = useData();
+  const { loading: contextLoading, datasetMode, isDbReady } = useData();
 
   // Metrics query
   const buildMetricsQuery = useCallback((where: string) => `
@@ -74,7 +74,7 @@ export default function Home() {
   const { data: langData, loading: q6 } = useQuery<any>(buildLangQuery);
   const { data: issuesData, loading: q7 } = useQuery<any>(buildIssuesQuery);
 
-  const isLoading = contextLoading || q1 || q2 || q3 || q4 || q5 || q6 || q7;
+  const isLoading = contextLoading || !isDbReady || q1 || q2 || q3 || q4 || q5 || q6 || q7;
 
   if (isLoading) {
     return (
@@ -85,6 +85,26 @@ export default function Home() {
   }
 
   const metrics = metricsData?.[0] || { total_repos: 0, avg_stars: 0, avg_prs: 0, avg_issues: 0 };
+
+  if (metrics.total_repos === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Visão Geral do Ecossistema</h2>
+          <p className="text-slate-500 mt-1">Análise consolidada</p>
+        </div>
+        <div className="bg-white p-12 rounded-2xl shadow-sm border border-slate-200 text-center">
+          <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <Database size={24} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-700 mb-1">Nenhum repositório encontrado</h3>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            Os filtros selecionados acima não retornaram nenhum registro. Tente selecionar outras linguagens, alterar o período de criação ou limpar os filtros.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-10">

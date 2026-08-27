@@ -3,7 +3,7 @@ import { useData } from '../hooks/useData';
 import { Spinner } from '../components/Spinner';
 
 export default function Bonus01() {
-  const { runQuery, buildWhereClause, loading: contextLoading, downloadProgress, datasetMode } = useData();
+  const { runQuery, buildWhereClause, loading: contextLoading, isDbReady, downloadProgress, datasetMode } = useData();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     wiki: {
@@ -17,7 +17,7 @@ export default function Bonus01() {
 
   useEffect(() => {
     let active = true;
-    if (contextLoading) return;
+    if (contextLoading || !isDbReady) return;
 
     async function loadStats() {
       setLoading(true);
@@ -111,9 +111,9 @@ export default function Bonus01() {
     loadStats();
 
     return () => { active = false; };
-  }, [contextLoading, buildWhereClause, runQuery, datasetMode]);
+  }, [contextLoading, isDbReady, buildWhereClause, runQuery, datasetMode]);
 
-  if (contextLoading || loading) {
+  if (contextLoading || !isDbReady || loading) {
     return (
       <Spinner 
         message={downloadProgress.message || "Analisando dados bônus estruturais..."} 

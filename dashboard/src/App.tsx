@@ -1,8 +1,10 @@
 import { useState, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Beaker, Menu, X, Star } from 'lucide-react';
+import { LayoutDashboard, Beaker, Menu, X, Star, AlertOctagon, RefreshCw, Trash2 } from 'lucide-react';
 import { DataProvider } from './context/DataContext';
+import { useData } from './hooks/useData';
 import { Filters } from './components/Filters';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const Home = lazy(() => import('./pages/Home'));
 const RQ01 = lazy(() => import('./pages/RQ01'));
@@ -120,6 +122,68 @@ function Sidebar() {
   );
 }
 
+function MainContent() {
+  const { isDbReady, initError, retryInit, clearCacheAndReload } = useData();
+
+  if (initError && !isDbReady) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 max-w-xl mx-auto">
+        <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mb-4 shadow-inner">
+          <AlertOctagon size={32} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Falha na Inicialização do DuckDB</h2>
+        <p className="text-slate-600 text-sm mb-4">
+          Não foi possível conectar ao motor SQL ou carregar a base de dados.
+        </p>
+        <div className="bg-slate-100 p-3 rounded-xl text-xs font-mono text-slate-700 text-left w-full mb-6 overflow-x-auto border border-slate-200">
+          {initError}
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            onClick={retryInit}
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-4 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer"
+          >
+            <RefreshCw size={16} />
+            <span>Tentar Novamente</span>
+          </button>
+          <button
+            onClick={clearCacheAndReload}
+            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm px-4 py-2.5 rounded-xl border border-slate-200 transition-all shadow-sm cursor-pointer"
+          >
+            <Trash2 size={16} />
+            <span>Limpar Cache e Recarregar</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Filters />
+      <ErrorBoundary fallbackTitle="Erro ao renderizar esta visualização">
+        <Suspense fallback={<div className="p-4 flex h-full items-center justify-center text-gray-500">Carregando visualização...</div>}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/rq01" element={<RQ01 />} />
+            <Route path="/rq02" element={<RQ02 />} />
+            <Route path="/rq03" element={<RQ03 />} />
+            <Route path="/rq04" element={<RQ04 />} />
+            <Route path="/rq05" element={<RQ05 />} />
+            <Route path="/rq06" element={<RQ06 />} />
+            <Route path="/rq07" element={<RQ07 />} />
+            <Route path="/bonus01" element={<Bonus01 />} />
+            <Route path="/bonus02" element={<Bonus02 />} />
+            <Route path="/bonus03" element={<Bonus03 />} />
+            <Route path="/bonus04" element={<Bonus04 />} />
+            <Route path="/bonus05" element={<Bonus05 />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+    </>
+  );
+}
+
 function App() {
   return (
     <DataProvider>
@@ -127,24 +191,7 @@ function App() {
         <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
           <Sidebar />
           <main className="flex-1 p-4 md:p-8 overflow-y-auto md:h-screen w-full min-w-0">
-            <Filters />
-            <Suspense fallback={<div className="p-4 flex h-full items-center justify-center text-gray-500">Carregando visualização...</div>}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/rq01" element={<RQ01 />} />
-                <Route path="/rq02" element={<RQ02 />} />
-                <Route path="/rq03" element={<RQ03 />} />
-                <Route path="/rq04" element={<RQ04 />} />
-                <Route path="/rq05" element={<RQ05 />} />
-                <Route path="/rq06" element={<RQ06 />} />
-                <Route path="/rq07" element={<RQ07 />} />
-                <Route path="/bonus01" element={<Bonus01 />} />
-                <Route path="/bonus02" element={<Bonus02 />} />
-                <Route path="/bonus03" element={<Bonus03 />} />
-                <Route path="/bonus04" element={<Bonus04 />} />
-                <Route path="/bonus05" element={<Bonus05 />} />
-              </Routes>
-            </Suspense>
+            <MainContent />
           </main>
         </div>
       </HashRouter>

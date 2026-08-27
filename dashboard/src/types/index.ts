@@ -50,6 +50,7 @@ export interface BackgroundProgress {
   totalBytes: number;
   percentage: number;
   isDownloading: boolean;
+  hasError?: boolean;
   message: string;
 }
 
